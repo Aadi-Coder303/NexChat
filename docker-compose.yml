@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: nexuser
+      POSTGRES_PASSWORD: nexpassword
+      POSTGRES_DB: nexchat
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    restart: always
+    ports:
+      - '6379:6379'
+    command: redis-server --appendonly yes --notify-keyspace-events Ex
+
+volumes:
+  postgres_data:

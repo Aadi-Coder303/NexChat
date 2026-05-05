@@ -1,0 +1,70 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id         String   @id @default(uuid())
+  email      String   @unique
+  username   String   @unique
+  avatarUrl  String?  @map("avatar_url")
+  passwordH  String   @map("password_h")
+  createdAt  DateTime @default(now()) @map("created_at")
+  lastSeen   DateTime @default(now()) @map("last_seen")
+
+  messages           Message[]
+  channelMemberships ChannelMember[]
+  createdChannels    Channel[]
+
+  @@map("users")
+}
+
+model Channel {
+  id          String   @id @default(uuid())
+  name        String?
+  type        String   // 'direct' | 'group'
+  createdById String?  @map("created_by")
+  createdBy   User?    @relation(fields: [createdById], references: [id])
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  members  ChannelMember[]
+  messages Message[]
+
+  @@map("channels")
+}
+
+model ChannelMember {
+  channelId String   @map("channel_id")
+  userId    String   @map("user_id")
+  role      String   @default("member") // 'admin' | 'member'
+  joinedAt  DateTime @default(now()) @map("joined_at")
+
+  channel Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([channelId, userId])
+  @@map("channel_members")
+}
+
+model Message {
+  id        String   @id @default(uuid())
+  channelId String   @map("channel_id")
+  senderId  String   @map("sender_id")
+  content   String
+  metadata  Json     @default("{}")
+  readBy    String[] @default([]) @map("read_by")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  channel Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  sender  User    @relation(fields: [senderId], references: [id])
+
+  @@index([channelId, createdAt(sort: Desc)])
+  @@map("messages")
+}

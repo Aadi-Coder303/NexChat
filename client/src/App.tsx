@@ -1,7 +1,6 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
-import { useAuthStore } from './stores/authStore';
 import LoginPage from './features/auth/LoginPage';
 import RegisterPage from './features/auth/RegisterPage';
+import ChatLayout from './features/chat/ChatLayout';
 
 function App() {
   const { user } = useAuthStore();
@@ -13,7 +12,7 @@ function App() {
         <Route path="/register" element={<RegisterPage />} />
         <Route 
           path="/" 
-          element={user ? <div>Chat Interface</div> : <Navigate to="/login" />} 
+          element={user ? <ChatLayout /> : <Navigate to="/login" />} 
         />
       </Routes>
     </div>

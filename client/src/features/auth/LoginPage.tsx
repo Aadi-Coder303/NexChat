@@ -1,92 +1,132 @@
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { Link, useNavigate } from 'react-router-dom';
+import * as z from 'zod';
+import { motion } from 'framer-motion';
+import { LogIn, Sparkles, Wand2 } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { useAuthStore } from '../../stores/authStore';
 import { Button } from '../../components/Button';
 import { Input } from '../../components/Input';
-import { useAuthStore } from '../../stores/authStore';
-import api from '../../lib/api';
-import { motion } from 'framer-motion';
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
 });
 
-type LoginFormValues = z.infer<typeof loginSchema>;
+type LoginForm = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
-  const navigate = useNavigate();
-  const setAuth = useAuthStore((state) => state.setAuth);
-  
-  const {
-    register,
-    handleSubmit,
-    formState: { errors, isSubmitting },
-    setError,
-  } = useForm<LoginFormValues>({
+  const login = useAuthStore((state) => state.login);
+  const [error, setError] = useState<string | null>(null);
+
+  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
   });
 
-  const onSubmit = async (data: LoginFormValues) => {
+  const onSubmit = async (data: LoginForm) => {
     try {
-      const response = await api.post('/auth/login', data);
-      const { user, accessToken } = response.data;
-      setAuth(user, accessToken);
-      navigate('/');
-    } catch (error: any) {
-      setError('root', {
-        message: error.response?.data?.error || 'Failed to login. Please check your credentials.',
-      });
+      setError(null);
+      await login(data.email, data.password);
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Login failed. Please try again.');
     }
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center p-4">
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-md space-y-8 bg-background-lighter p-8 rounded-2xl border border-white/5 shadow-2xl"
-      >
-        <div className="text-center space-y-2">
-          <h1 className="text-3xl font-bold tracking-tight">Welcome back</h1>
-          <p className="text-white/50 text-sm">Enter your credentials to access your account</p>
-        </div>
+    <div className="min-h-screen flex items-center justify-center p-6 relative overflow-hidden bg-[#050505]">
+      {/* Surreal Background Asset */}
+      <div className="absolute inset-0 z-0 opacity-40">
+        <img 
+          src="/retro_surreal_bg.png" 
+          className="w-full h-full object-cover filter contrast-125 hue-rotate-15 scale-110"
+          alt="Surreal background"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-transparent to-transparent" />
+      </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-          {errors.root && (
-            <div className="bg-danger/10 border border-danger/20 text-danger text-sm p-3 rounded-lg text-center">
-              {errors.root.message}
-            </div>
-          )}
-          
-          <div className="space-y-4">
-            <Input
-              label="Email"
-              type="email"
-              placeholder="name@example.com"
-              {...register('email')}
-              error={errors.email?.message}
-            />
-            <Input
-              label="Password"
-              type="password"
-              placeholder="••••••••"
-              {...register('password')}
-              error={errors.password?.message}
-            />
+      <motion.div
+        initial={{ opacity: 0, scale: 0.8, rotate: -5 }}
+        animate={{ opacity: 1, scale: 1, rotate: 0 }}
+        transition={{ type: 'spring', damping: 15 }}
+        className="w-full max-w-md z-10"
+      >
+        <div className="glass-retro p-8 rounded-[2rem] border-2 border-white/10 relative">
+          {/* Floating Surreal Elements */}
+          <motion.div 
+            animate={{ y: [0, -10, 0], rotate: [0, 5, 0] }}
+            transition={{ duration: 4, repeat: Infinity }}
+            className="absolute -top-12 -right-8 text-primary opacity-50"
+          >
+            <Sparkles size={64} />
+          </motion.div>
+
+          <div className="text-center mb-10">
+            <motion.div
+              initial={{ y: -20 }}
+              animate={{ y: 0 }}
+              className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary shadow-[4px_4px_0px_0px_#000] border-2 border-black mb-6"
+            >
+              <LogIn className="text-white" size={32} />
+            </motion.div>
+            <h1 className="text-4xl font-display text-white mb-2 italic">Welcome Back</h1>
+            <p className="text-primary font-bold text-xs uppercase tracking-[0.2em]">Enter the dreamscape</p>
           </div>
 
-          <Button type="submit" className="w-full" isLoading={isSubmitting}>
-            Sign In
-          </Button>
-        </form>
+          {error && (
+            <motion.div
+              initial={{ x: -10 }}
+              animate={{ x: 0 }}
+              className="bg-danger/20 border-2 border-danger text-danger text-xs font-bold p-4 rounded-xl mb-6 flex items-center gap-3"
+            >
+              <Wand2 size={16} />
+              {error}
+            </motion.div>
+          )}
 
-        <div className="text-center">
-          <p className="text-white/50 text-sm">
-            Don't have an account?{' '}
-            <Link to="/register" className="text-primary hover:underline font-medium">
-              Create one
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold uppercase tracking-widest text-white/40 ml-4">Registry Email</label>
+              <Input
+                {...register('email')}
+                type="email"
+                placeholder="you@nebula.com"
+                error={errors.email?.message}
+                className="bg-black/40 border-white/10 h-14 rounded-xl focus:border-primary/50 text-white placeholder:text-white/20"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold uppercase tracking-widest text-white/40 ml-4">Access Secret</label>
+              <Input
+                {...register('password')}
+                type="password"
+                placeholder="••••••••"
+                error={errors.password?.message}
+                className="bg-black/40 border-white/10 h-14 rounded-xl focus:border-primary/50 text-white placeholder:text-white/20"
+              />
+            </div>
+
+            <Button
+              type="submit"
+              disabled={isSubmitting}
+              className="w-full h-14 rounded-2xl text-lg group overflow-hidden relative"
+            >
+              <motion.span 
+                className="relative z-10 flex items-center gap-2"
+                whileHover={{ scale: 1.05 }}
+              >
+                {isSubmitting ? 'Decrypting...' : 'Access NexChat'}
+                <LogIn size={18} />
+              </motion.span>
+              <div className="absolute inset-0 bg-gradient-to-r from-primary to-accent opacity-0 group-hover:opacity-20 transition-opacity" />
+            </Button>
+          </form>
+
+          <p className="text-center mt-8 text-sm text-white/40">
+            Lost your way?{' '}
+            <Link to="/register" className="text-accent font-bold hover:underline italic">
+              Create a new identity
             </Link>
           </p>
         </div>

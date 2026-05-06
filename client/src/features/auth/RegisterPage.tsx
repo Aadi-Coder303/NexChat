@@ -1,115 +1,141 @@
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
+import * as z from 'zod';
+import { motion } from 'framer-motion';
+import { UserPlus, Sparkles, Wand2, ArrowLeft } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useAuthStore } from '../../stores/authStore';
 import { Button } from '../../components/Button';
 import { Input } from '../../components/Input';
-import { useAuthStore } from '../../stores/authStore';
-import api from '../../lib/api';
-import { motion } from 'framer-motion';
 
 const registerSchema = z.object({
   username: z.string().min(3, 'Username must be at least 3 characters'),
   email: z.string().email('Invalid email address'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
-  confirmPassword: z.string(),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ['confirmPassword'],
 });
 
-type RegisterFormValues = z.infer<typeof registerSchema>;
+type RegisterForm = z.infer<typeof registerSchema>;
 
 export default function RegisterPage() {
+  const registerUser = useAuthStore((state) => state.register);
   const navigate = useNavigate();
-  const setAuth = useAuthStore((state) => state.setAuth);
-  
-  const {
-    register,
-    handleSubmit,
-    formState: { errors, isSubmitting },
-    setError,
-  } = useForm<RegisterFormValues>({
+  const [error, setError] = useState<string | null>(null);
+
+  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<RegisterForm>({
     resolver: zodResolver(registerSchema),
   });
 
-  const onSubmit = async (data: RegisterFormValues) => {
+  const onSubmit = async (data: RegisterForm) => {
     try {
-      const response = await api.post('/auth/register', {
-        username: data.username,
-        email: data.email,
-        password: data.password,
-      });
-      const { user, accessToken } = response.data;
-      setAuth(user, accessToken);
+      setError(null);
+      await registerUser(data.username, data.email, data.password);
       navigate('/');
-    } catch (error: any) {
-      setError('root', {
-        message: error.response?.data?.error || 'Registration failed. Please try again.',
-      });
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Registration failed. Please try again.');
     }
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center p-4">
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-md space-y-8 bg-background-lighter p-8 rounded-2xl border border-white/5 shadow-2xl"
-      >
-        <div className="text-center space-y-2">
-          <h1 className="text-3xl font-bold tracking-tight">Create an account</h1>
-          <p className="text-white/50 text-sm">Join NexChat and start messaging your team</p>
-        </div>
+    <div className="min-h-screen flex items-center justify-center p-6 relative overflow-hidden bg-[#050505]">
+      {/* Surreal Background Asset */}
+      <div className="absolute inset-0 z-0 opacity-40">
+        <img 
+          src="/retro_surreal_bg.png" 
+          className="w-full h-full object-cover filter contrast-125 hue-rotate-180 scale-125"
+          alt="Surreal background"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-transparent to-transparent" />
+      </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-          {errors.root && (
-            <div className="bg-danger/10 border border-danger/20 text-danger text-sm p-3 rounded-lg text-center">
-              {errors.root.message}
-            </div>
-          )}
-          
-          <div className="space-y-4">
-            <Input
-              label="Username"
-              type="text"
-              placeholder="johndoe"
-              {...register('username')}
-              error={errors.username?.message}
-            />
-            <Input
-              label="Email"
-              type="email"
-              placeholder="name@example.com"
-              {...register('email')}
-              error={errors.email?.message}
-            />
-            <Input
-              label="Password"
-              type="password"
-              placeholder="••••••••"
-              {...register('password')}
-              error={errors.password?.message}
-            />
-            <Input
-              label="Confirm Password"
-              type="password"
-              placeholder="••••••••"
-              {...register('confirmPassword')}
-              error={errors.confirmPassword?.message}
-            />
+      <motion.div
+        initial={{ opacity: 0, scale: 0.8, rotate: 5 }}
+        animate={{ opacity: 1, scale: 1, rotate: 0 }}
+        transition={{ type: 'spring', damping: 15 }}
+        className="w-full max-w-md z-10"
+      >
+        <div className="glass-retro p-8 rounded-[2rem] border-2 border-white/10 relative">
+          <Link to="/login" className="absolute top-8 left-8 text-white/40 hover:text-white transition-colors">
+            <ArrowLeft size={20} />
+          </Link>
+
+          <div className="text-center mb-10">
+            <motion.div
+              initial={{ y: -20 }}
+              animate={{ y: 0 }}
+              className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-accent shadow-[4px_4px_0px_0px_#000] border-2 border-black mb-6"
+            >
+              <UserPlus className="text-black" size={32} />
+            </motion.div>
+            <h1 className="text-4xl font-display text-white mb-2 italic tracking-tight">Birth an Identity</h1>
+            <p className="text-accent font-bold text-xs uppercase tracking-[0.2em]">Join the collective consciousness</p>
           </div>
 
-          <Button type="submit" className="w-full" isLoading={isSubmitting}>
-            Sign Up
-          </Button>
-        </form>
+          {error && (
+            <motion.div
+              initial={{ x: -10 }}
+              animate={{ x: 0 }}
+              className="bg-danger/20 border-2 border-danger text-danger text-xs font-bold p-4 rounded-xl mb-6 flex items-center gap-3"
+            >
+              <Wand2 size={16} />
+              {error}
+            </motion.div>
+          )}
 
-        <div className="text-center">
-          <p className="text-white/50 text-sm">
-            Already have an account?{' '}
-            <Link to="/login" className="text-primary hover:underline font-medium">
-              Sign in
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold uppercase tracking-widest text-white/40 ml-4">Entity Handle</label>
+              <Input
+                {...register('username')}
+                type="text"
+                placeholder="aadi_observer"
+                error={errors.username?.message}
+                className="bg-black/40 border-white/10 h-14 rounded-xl focus:border-accent/50 text-white placeholder:text-white/20"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold uppercase tracking-widest text-white/40 ml-4">Registry Email</label>
+              <Input
+                {...register('email')}
+                type="email"
+                placeholder="you@nebula.com"
+                error={errors.email?.message}
+                className="bg-black/40 border-white/10 h-14 rounded-xl focus:border-accent/50 text-white placeholder:text-white/20"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold uppercase tracking-widest text-white/40 ml-4">Secure Seal</label>
+              <Input
+                {...register('password')}
+                type="password"
+                placeholder="••••••••"
+                error={errors.password?.message}
+                className="bg-black/40 border-white/10 h-14 rounded-xl focus:border-accent/50 text-white placeholder:text-white/20"
+              />
+            </div>
+
+            <Button
+              type="submit"
+              variant="accent"
+              disabled={isSubmitting}
+              className="w-full h-14 rounded-2xl text-lg group overflow-hidden relative"
+            >
+              <motion.span 
+                className="relative z-10 flex items-center gap-2"
+                whileHover={{ scale: 1.05 }}
+              >
+                {isSubmitting ? 'Manifesting...' : 'Manifest Identity'}
+                <Sparkles size={18} />
+              </motion.span>
+            </Button>
+          </form>
+
+          <p className="text-center mt-8 text-sm text-white/40">
+            Already manifested?{' '}
+            <Link to="/login" className="text-primary font-bold hover:underline italic">
+              Recall identity
             </Link>
           </p>
         </div>

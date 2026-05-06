@@ -1,28 +1,74 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&family=Syne:wght@400;700;800&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  color-scheme: dark;
+  --background: #050505;
+  --primary: #8B5CF6;
+  --primary-glow: rgba(139, 92, 246, 0.5);
+  --accent: #10B981;
+  --accent-glow: rgba(16, 185, 129, 0.5);
+  --danger: #EF4444;
+  --text-main: #FFFFFF;
+  --text-dim: rgba(255, 255, 255, 0.6);
+  --retro-grain: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
 }
 
 body {
-  @apply bg-background text-white antialiased;
+  @apply bg-[#050505] text-white selection:bg-primary/30 selection:text-white;
+  font-family: 'Space Mono', monospace;
+  overflow-x: hidden;
 }
 
-/* Custom scrollbar for dark theme */
+h1, h2, h3, .font-display {
+  font-family: 'Syne', sans-serif;
+  @apply font-extrabold uppercase tracking-tighter;
+}
+
+/* Surreal Grain Overlay */
+body::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: var(--retro-grain);
+  opacity: 0.05;
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* Distorted Gradients */
+.surreal-gradient {
+  background: radial-gradient(circle at 50% 50%, var(--primary-glow) 0%, transparent 70%),
+              radial-gradient(circle at 0% 0%, var(--accent-glow) 0%, transparent 50%);
+}
+
+.glass-retro {
+  @apply bg-white/5 backdrop-blur-xl border border-white/10 shadow-2xl;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.5), inset 0 0 10px rgba(255, 255, 255, 0.05);
+}
+
+.neo-brutal {
+  @apply border-2 border-primary shadow-[4px_4px_0px_0px_rgba(139,92,246,1)] transition-all;
+}
+
+.neo-brutal:hover {
+  @apply translate-x-[2px] translate-y-[2px] shadow-[2px_2px_0px_0px_rgba(139,92,246,1)];
+}
+
+/* Custom Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  @apply bg-background;
+  @apply bg-transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  @apply bg-background-subtle rounded-full;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  @apply bg-background-lighter;
+  @apply bg-white/10 rounded-full hover:bg-primary/50 transition-colors;
 }

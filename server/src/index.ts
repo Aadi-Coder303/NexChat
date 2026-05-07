@@ -45,6 +45,7 @@ const corsOptions: cors.CorsOptions = {
 };
 
 const app = express();
+app.set('trust proxy', 1); // Trust the first proxy (Railway/Vercel) to get the real client IP
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {

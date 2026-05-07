@@ -50,7 +50,7 @@ app.use(helmet({
   },
 }));
 app.use(cors({
-  origin: process.env.CLIENT_ORIGIN || 'http://localhost:5173',
+  origin: true, // Reflect request origin
   credentials: true,
 }));
 app.use(express.json({ limit: '10kb' })); // Limit payload size to 10kb

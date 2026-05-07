@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -11,33 +8,31 @@ datasource db {
 }
 
 model User {
-  id           String   @id @default(uuid())
-  username     String   @unique
-  avatarUrl    String?  @map("avatar_url")
-  passwordH    String   @map("password_h")
-  recoveryKeyH String   @map("recovery_key_h")
-  publicKey    String?  @map("public_key")
-  friendCode   String   @unique @map("friend_code")
-  createdAt    DateTime @default(now()) @map("created_at")
-  lastSeen     DateTime @default(now()) @map("last_seen")
-
-  messages           Message[]
+  id                 String          @id @default(uuid())
+  username           String          @unique
+  avatarUrl          String?         @map("avatar_url")
+  passwordH          String          @map("password_h")
+  recoveryKeyH       String          @map("recovery_key_h")
+  publicKey          String?         @map("public_key")
+  friendCode         String          @unique @map("friend_code")
+  createdAt          DateTime        @default(now()) @map("created_at")
+  lastSeen           DateTime        @default(now()) @map("last_seen")
   channelMemberships ChannelMember[]
   createdChannels    Channel[]
+  messages           Message[]
 
   @@map("users")
 }
 
 model Channel {
-  id          String   @id @default(uuid())
+  id          String          @id @default(uuid())
   name        String?
-  type        String   // 'direct' | 'group'
-  createdById String?  @map("created_by")
-  createdBy   User?    @relation(fields: [createdById], references: [id])
-  createdAt   DateTime @default(now()) @map("created_at")
-
-  members  ChannelMember[]
-  messages Message[]
+  type        String
+  createdById String?         @map("created_by")
+  createdAt   DateTime        @default(now()) @map("created_at")
+  members     ChannelMember[]
+  createdBy   User?           @relation(fields: [createdById], references: [id])
+  messages    Message[]
 
   @@map("channels")
 }
@@ -45,29 +40,27 @@ model Channel {
 model ChannelMember {
   channelId String   @map("channel_id")
   userId    String   @map("user_id")
-  role      String   @default("member") // 'admin' | 'member'
+  role      String   @default("member")
   joinedAt  DateTime @default(now()) @map("joined_at")
-
-  channel Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)
-  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  channel   Channel  @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@id([channelId, userId])
   @@map("channel_members")
 }
 
 model Message {
-  id        String   @id @default(uuid())
-  channelId String   @map("channel_id")
-  senderId  String   @map("sender_id")
+  id             String   @id @default(uuid())
+  channelId      String   @map("channel_id")
+  senderId       String   @map("sender_id")
   content        String
   isEncrypted    Boolean  @default(false) @map("is_encrypted")
-  encryptionData Json?    @map("encryption_data") // Stores IV and encrypted keys
+  encryptionData Json?    @map("encryption_data")
   metadata       Json     @default("{}")
   readBy         String[] @default([]) @map("read_by")
   createdAt      DateTime @default(now()) @map("created_at")
-
-  channel Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)
-  sender  User    @relation(fields: [senderId], references: [id])
+  channel        Channel  @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  sender         User     @relation(fields: [senderId], references: [id])
 
   @@index([channelId, createdAt(sort: Desc)])
   @@map("messages")

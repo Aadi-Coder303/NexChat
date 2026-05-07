@@ -4,12 +4,31 @@ const redisClient = createClient({
   url: process.env.REDIS_URL || 'redis://localhost:6379',
 });
 
-redisClient.on('error', (err) => console.error('Redis Client Error', err));
+let isRedisConnected = false;
 
-// Auto-connect
+redisClient.on('error', (err) => {
+  if (isRedisConnected) {
+    console.error('[Redis] Connection lost:', err.message);
+    isRedisConnected = false;
+  }
+});
+
+redisClient.on('connect', () => {
+  console.log('🚀 Connecting to Redis...');
+});
+
+redisClient.on('ready', () => {
+  console.log('✅ Redis Client Ready');
+  isRedisConnected = true;
+});
+
+// Auto-connect with retry logic or silent failure
 (async () => {
-  await redisClient.connect();
-  console.log('Connected to Redis');
+  try {
+    await redisClient.connect();
+  } catch (err) {
+    console.warn('⚠️ Could not connect to Redis. Presence features will be limited.');
+  }
 })();
 
 export default redisClient;

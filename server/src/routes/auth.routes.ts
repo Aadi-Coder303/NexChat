@@ -95,6 +95,8 @@ router.post('/recover', async (req, res, next) => {
       validated.newPassword
     );
     res.json({ ok: true, message: 'Password reset successfully' });
+  } catch (error: any) {
+    next(error);
   }
 });
 

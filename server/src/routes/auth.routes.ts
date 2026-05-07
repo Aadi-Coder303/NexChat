@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { AuthService } from '../services/auth.service';
+import { authMiddleware } from '../middleware/auth.middleware';
 
 const router = Router();
 
@@ -103,11 +104,15 @@ router.post('/recover', async (req, res, next) => {
   }
 });
 
-router.post('/users/:id/public-key', async (req: any, res, next) => {
+router.post('/users/:id/public-key', authMiddleware, async (req: any, res, next) => {
   try {
     const { id } = req.params;
+    // Prevent IDOR: users may only update their own public key
+    if (req.userId !== id) {
+      return res.status(403).json({ error: 'Forbidden: you can only update your own public key' });
+    }
     const { publicKey } = req.body;
-    
+    if (!publicKey) return res.status(400).json({ error: 'publicKey is required' });
     await AuthService.updatePublicKey(id, publicKey);
     res.json({ ok: true });
   } catch (error: any) {

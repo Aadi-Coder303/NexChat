@@ -6,8 +6,13 @@ export const errorHandler = (err: any, req: Request, res: Response, next: NextFu
   const status = err.status || 500;
   const message = err.message || 'Internal Server Error';
   
-  // Don't leak stack traces in production
+  // Show the real message if it's a client-side error (4xx) 
+  // or if we're not in production.
+  const displayMessage = (status < 500 || process.env.NODE_ENV !== 'production') 
+    ? message 
+    : 'An unexpected error occurred';
+    
   res.status(status).json({
-    error: process.env.NODE_ENV === 'production' ? 'An unexpected error occurred' : message,
+    error: displayMessage,
   });
 };

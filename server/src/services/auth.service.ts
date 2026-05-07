@@ -2,6 +2,7 @@ import argon2 from 'argon2';
 import crypto from 'crypto';
 import { prisma } from '../lib/prisma';
 import { generateAccessToken, generateRefreshToken } from '../lib/jwt';
+import { AppError } from '../utils/errors';
 
 export class AuthService {
   static async register(username: string, password_h: string) {
@@ -10,7 +11,7 @@ export class AuthService {
     });
 
     if (existingUser) {
-      throw new Error('User with this username already exists');
+      throw new AppError('User with this username already exists', 400);
     }
 
     const hashedPassword = await argon2.hash(password_h);
@@ -39,13 +40,13 @@ export class AuthService {
     });
 
     if (!user) {
-      throw new Error('Invalid credentials');
+      throw new AppError('Invalid credentials', 401);
     }
 
     const isValid = await argon2.verify(user.passwordH, password_h);
 
     if (!isValid) {
-      throw new Error('Invalid credentials');
+      throw new AppError('Invalid credentials', 401);
     }
 
     const accessToken = generateAccessToken(user.id);
@@ -58,13 +59,13 @@ export class AuthService {
     });
 
     if (!user) {
-      throw new Error('Invalid recovery request');
+      throw new AppError('Invalid recovery request', 400);
     }
 
     const isValidKey = await argon2.verify(user.recoveryKeyH, recoveryKey);
 
     if (!isValidKey) {
-      throw new Error('Invalid recovery key');
+      throw new AppError('Invalid recovery key', 401);
     }
 
     const hashedPassword = await argon2.hash(newPassword_h);

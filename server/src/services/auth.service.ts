@@ -5,7 +5,7 @@ import { generateAccessToken, generateRefreshToken } from '../lib/jwt';
 import { AppError } from '../utils/errors';
 
 export class AuthService {
-  static async register(username: string, password_h: string) {
+  static async register(username: string, password_h: string, publicKey?: string) {
     const existingUser = await prisma.user.findUnique({
       where: { username },
     });
@@ -25,6 +25,7 @@ export class AuthService {
         username,
         passwordH: hashedPassword,
         recoveryKeyH: hashedRecoveryKey,
+        publicKey,
       },
     });
 
@@ -78,5 +79,12 @@ export class AuthService {
     });
 
     return { ok: true };
+  }
+
+  static async updatePublicKey(userId: string, publicKey: string) {
+    return await prisma.user.update({
+      where: { id: userId },
+      data: { publicKey },
+    });
   }
 }

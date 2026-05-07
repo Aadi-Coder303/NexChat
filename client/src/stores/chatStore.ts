@@ -5,6 +5,13 @@ export interface Channel {
   id: string;
   name: string;
   type: 'direct' | 'group';
+  members?: {
+    user: {
+      id: string;
+      username: string;
+      publicKey?: string;
+    };
+  }[];
   _count?: { messages: number };
 }
 
@@ -13,11 +20,14 @@ export interface Message {
   content: string;
   senderId: string;
   channelId: string;
+  isEncrypted?: boolean;
+  encryptionData?: any;
   createdAt: string;
   sender: {
     id: string;
     username: string;
     avatarUrl: string | null;
+    publicKey?: string;
   };
   clientTempId?: string;
 }

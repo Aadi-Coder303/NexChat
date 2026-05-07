@@ -16,6 +16,7 @@ model User {
   avatarUrl    String?  @map("avatar_url")
   passwordH    String   @map("password_h")
   recoveryKeyH String   @map("recovery_key_h")
+  publicKey    String?  @map("public_key")
   createdAt    DateTime @default(now()) @map("created_at")
   lastSeen     DateTime @default(now()) @map("last_seen")
 
@@ -57,10 +58,12 @@ model Message {
   id        String   @id @default(uuid())
   channelId String   @map("channel_id")
   senderId  String   @map("sender_id")
-  content   String
-  metadata  Json     @default("{}")
-  readBy    String[] @default([]) @map("read_by")
-  createdAt DateTime @default(now()) @map("created_at")
+  content        String
+  isEncrypted    Boolean  @default(false) @map("is_encrypted")
+  encryptionData Json?    @map("encryption_data") // Stores IV and encrypted keys
+  metadata       Json     @default("{}")
+  readBy         String[] @default([]) @map("read_by")
+  createdAt      DateTime @default(now()) @map("created_at")
 
   channel Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)
   sender  User    @relation(fields: [senderId], references: [id])

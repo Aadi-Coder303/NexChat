@@ -1,7 +1,7 @@
 import { prisma } from '../lib/prisma';
 
 export class MessageService {
-  static async sendMessage(channelId: string, senderId: string, content: string) {
+  static async sendMessage(channelId: string, senderId: string, content: string, isEncrypted: boolean = false, encryptionData?: any) {
     // Verify membership
     const membership = await prisma.channelMember.findUnique({
       where: {
@@ -21,6 +21,8 @@ export class MessageService {
         channelId,
         senderId,
         content,
+        isEncrypted,
+        encryptionData: encryptionData || {},
       },
       include: {
         sender: {

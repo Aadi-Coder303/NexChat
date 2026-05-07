@@ -9,6 +9,7 @@ import { useAuthStore } from '../../stores/authStore';
 import { Button } from '../../components/Button';
 import { Input } from '../../components/Input';
 import { Tooltip } from '../../components/Tooltip';
+import { CryptoEngine } from '../../lib/crypto';
 
 const loginSchema = z.object({
   username: z.string().min(3, 'Username must be at least 3 characters'),
@@ -29,6 +30,20 @@ export default function LoginPage() {
     try {
       setError(null);
       await login(data.username, data.password);
+      
+      const user = useAuthStore.getState().user;
+      if (user) {
+        // Check if we have a private key
+        const existingKey = await CryptoEngine.getPrivateKey(user.id);
+        if (!existingKey) {
+          console.log('No private key found for this identity. Generating new cryptographic seal...');
+          const { publicKey, privateKey } = await CryptoEngine.generateKeyPair();
+          await CryptoEngine.storePrivateKey(user.id, privateKey);
+          
+          // Update server's public key
+          await api.post(`/auth/users/${user.id}/public-key`, { publicKey });
+        }
+      }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       setError(err.response?.data?.error || 'Login failed. Please try again.');

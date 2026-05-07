@@ -55,6 +55,7 @@ export class ChannelService {
                 id: true,
                 username: true,
                 avatarUrl: true,
+                publicKey: true,
               },
             },
           },

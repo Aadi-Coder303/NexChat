@@ -66,13 +66,19 @@ class SocketService {
     }
   }
 
-  sendMessage(channelId: string, content: string) {
+  sendMessage(channelId: string, content: string, encryptionData?: any) {
     if (!this.socket?.connected) return;
 
     const clientTempId = Math.random().toString(36).substring(7);
     
     // Emit to server
-    this.socket.emit('message:send', { channelId, content, clientTempId });
+    this.socket.emit('message:send', { 
+      channelId, 
+      content, 
+      clientTempId, 
+      isEncrypted: !!encryptionData, 
+      encryptionData 
+    });
 
     // Optimistic UI update
     const currentUser = useAuthStore.getState().user;
@@ -82,6 +88,8 @@ class SocketService {
         content,
         channelId,
         senderId: currentUser.id,
+        isEncrypted: !!encryptionData,
+        encryptionData,
         createdAt: new Date().toISOString(),
         sender: {
           id: currentUser.id,

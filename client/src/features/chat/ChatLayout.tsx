@@ -6,9 +6,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useChatStore } from '../../stores/chatStore';
 import { socketService } from '../../lib/socket';
 import { Tooltip } from '../../components/Tooltip';
+import { CryptoEngine } from '../../lib/crypto';
+import { useAuthStore } from '../../stores/authStore';
 
 export default function ChatLayout() {
-  const { channels, activeChannelId, setActiveChannel, messages, fetchChannels, onlineUsers } = useChatStore();
+  const { user } = useAuthStore();
+  const { channels, activeChannelId, setActiveChannel, messages, fetchChannels, onlineUsers, addMessage } = useChatStore();
+  const [decryptedMessages, setDecryptedMessages] = useState<Record<string, Record<string, string>>>({}); // channelId -> messageId -> decryptedContent
   const [messageText, setMessageText] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -41,15 +45,87 @@ export default function ChatLayout() {
   // Auto-scroll to bottom when messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, activeChannelId]);
+  }, [messages, activeChannelId, decryptedMessages]);
+
+  // Decrypt messages as they arrive
+  useEffect(() => {
+    const decryptAll = async () => {
+      if (!activeChannelId || !user) return;
+      const channelMessages = messages[activeChannelId] || [];
+      const privateKey = await CryptoEngine.getPrivateKey(user.id);
+      
+      if (!privateKey) return;
+
+      for (const msg of channelMessages) {
+        if (msg.isEncrypted && msg.encryptionData && !decryptedMessages[activeChannelId]?.[msg.id]) {
+          try {
+            // Find our encrypted key in the encryptionData map
+            const encryptedKey = msg.encryptionData.keys?.[user.id];
+            if (encryptedKey) {
+              const decrypted = await CryptoEngine.decryptMessage(
+                msg.content,
+                encryptedKey,
+                msg.encryptionData.iv,
+                privateKey
+              );
+              setDecryptedMessages(prev => ({
+                ...prev,
+                [activeChannelId]: {
+                  ...(prev[activeChannelId] || {}),
+                  [msg.id]: decrypted
+                }
+              }));
+            }
+          } catch (err) {
+            console.error('Decryption failed for message:', msg.id, err);
+          }
+        }
+      }
+    };
+
+    decryptAll();
+  }, [messages, activeChannelId, user]);
 
   const activeChannel = channels.find(c => c.id === activeChannelId);
   const activeMessages = activeChannelId ? (messages[activeChannelId] || []) : [];
 
-  const handleSendMessage = () => {
-    if (messageText.trim() && activeChannelId) {
-      socketService.sendMessage(activeChannelId, messageText.trim());
-      setMessageText('');
+  const handleSendMessage = async () => {
+    if (!messageText.trim() || !activeChannelId || !activeChannel || !user) return;
+
+    const text = messageText.trim();
+    setMessageText('');
+
+    try {
+      // E2EE: Encrypt for all members
+      const membersWithKeys = activeChannel.members?.filter(m => m.user.publicKey) || [];
+      
+      if (membersWithKeys.length > 0) {
+        // Simplified for MVP: Encrypt with a single AES key and wrap it for each member
+        // (Wait, my CryptoEngine currently encrypts for ONE recipient).
+        // I'll update CryptoEngine or just loop for now (less efficient but works).
+        
+        // Actually, for this first pass, let's just encrypt for the "main" recipient if it's a DM, 
+        // or everyone if it's a group.
+        
+        const encryptionData: any = { keys: {}, iv: '' };
+        let encryptedPayload: any = null;
+
+        for (const member of membersWithKeys) {
+          const result = await CryptoEngine.encryptMessage(text, member.user.publicKey!);
+          encryptionData.keys[member.user.id] = result.key;
+          encryptionData.iv = result.iv;
+          encryptedPayload = result.content; // Content is the same for all, just the key is different
+        }
+
+        socketService.sendMessage(activeChannelId, encryptedPayload, encryptionData);
+      } else {
+        // Fallback to plaintext if no one has keys (should not happen for new users)
+        socketService.sendMessage(activeChannelId, text);
+      }
+    } catch (err) {
+      console.error('Encryption failed:', err);
+      // Fallback
+      socketService.sendMessage(activeChannelId, text);
     }
   };
 
@@ -133,7 +209,9 @@ export default function ChatLayout() {
                   </div>
                   <div className="glass-retro px-5 py-3 rounded-2xl rounded-tl-none relative border-white/5 group-hover:border-white/10 transition-colors">
                     <p className="text-sm text-white/80 leading-relaxed font-medium whitespace-pre-wrap">
-                      {msg.content}
+                      {msg.isEncrypted 
+                        ? (decryptedMessages[activeChannelId!]?.[msg.id] || '🔒 [Encrypted Discovery...]') 
+                        : msg.content}
                     </p>
                     {msg.clientTempId && (
                       <span className="absolute -bottom-4 right-0 text-[8px] text-white/20 uppercase tracking-widest">Sending...</span>

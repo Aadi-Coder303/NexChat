@@ -5,6 +5,7 @@ import api from '../lib/api';
 interface User {
   id: string;
   username: string;
+  publicKey?: string;
 }
 
 interface AuthState {
@@ -12,7 +13,7 @@ interface AuthState {
   accessToken: string | null;
   setAuth: (user: User | null, accessToken: string | null) => void;
   login: (username: string, password: string) => Promise<void>;
-  register: (username: string, password: string) => Promise<{ recoveryKey: string }>;
+  register: (username: string, password: string, publicKey?: string) => Promise<{ recoveryKey: string }>;
   recoverAccount: (username: string, recoveryKey: string, newPassword: string) => Promise<void>;
   logout: () => Promise<void>;
 }
@@ -30,8 +31,8 @@ export const useAuthStore = create<AuthState>()(
         set({ user, accessToken });
       },
 
-      register: async (username, password) => {
-        const response = await api.post('/auth/register', { username, password });
+      register: async (username, password, publicKey) => {
+        const response = await api.post('/auth/register', { username, password, publicKey });
         const { user, accessToken, recoveryKey } = response.data;
         set({ user, accessToken });
         return { recoveryKey };

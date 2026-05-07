@@ -9,6 +9,7 @@ import { useAuthStore } from '../../stores/authStore';
 import { Button } from '../../components/Button';
 import { Input } from '../../components/Input';
 import { Tooltip } from '../../components/Tooltip';
+import { CryptoEngine } from '../../lib/crypto';
 
 const registerSchema = z.object({
   username: z.string().min(3, 'Username must be at least 3 characters'),
@@ -39,7 +40,21 @@ export default function RegisterPage() {
   const onSubmit = async (data: RegisterForm) => {
     try {
       setError(null);
-      const res = await registerUser(data.username, data.password);
+      // Generate E2EE Key Pair
+      const { publicKey, privateKey } = await CryptoEngine.generateKeyPair();
+      
+      const res = await registerUser(data.username, data.password, publicKey);
+      
+      // Store private key in IndexedDB linked to user ID
+      if (res) {
+        // We'll need the user ID from the response, but store it after registration is confirmed
+        // Since authStore sets the user, we can get it from there
+        const user = useAuthStore.getState().user;
+        if (user) {
+          await CryptoEngine.storePrivateKey(user.id, privateKey);
+        }
+      }
+      
       setRecoveryKey(res.recoveryKey);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {

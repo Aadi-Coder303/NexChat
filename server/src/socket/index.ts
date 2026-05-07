@@ -64,9 +64,9 @@ export const setupSocketHandlers = (io: Server) => {
       console.log(`📣 User ${userId} left channel: ${channelId}`);
     });
 
-    socket.on('message:send', async ({ channelId, content, clientTempId }) => {
+    socket.on('message:send', async ({ channelId, content, clientTempId, isEncrypted, encryptionData }) => {
       try {
-        const message = await MessageService.sendMessage(channelId, userId, content);
+        const message = await MessageService.sendMessage(channelId, userId, content, isEncrypted, encryptionData);
         
         // Broadcast to everyone in the channel
         io.to(`channel:${channelId}`).emit('message:new', message);

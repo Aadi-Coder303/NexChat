@@ -3,37 +3,39 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { motion } from 'framer-motion';
-import { UserPlus, Sparkles, Wand2, ArrowLeft } from 'lucide-react';
+import { KeyRound, Sparkles, Wand2, ArrowLeft } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
 import { Button } from '../../components/Button';
 import { Input } from '../../components/Input';
 
-const registerSchema = z.object({
+const recoverSchema = z.object({
   username: z.string().min(3, 'Username must be at least 3 characters'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
+  recoveryKey: z.string().min(1, 'Recovery Key is required'),
+  newPassword: z.string().min(6, 'Password must be at least 6 characters'),
 });
 
-type RegisterForm = z.infer<typeof registerSchema>;
+type RecoverForm = z.infer<typeof recoverSchema>;
 
-export default function RegisterPage() {
-  const registerUser = useAuthStore((state) => state.register);
+export default function RecoverPage() {
+  const recoverAccount = useAuthStore((state) => state.recoverAccount);
   const navigate = useNavigate();
   const [error, setError] = useState<string | null>(null);
-  const [recoveryKey, setRecoveryKey] = useState<string | null>(null);
+  const [success, setSuccess] = useState<boolean>(false);
 
-  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<RegisterForm>({
-    resolver: zodResolver(registerSchema),
+  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<RecoverForm>({
+    resolver: zodResolver(recoverSchema),
   });
 
-  const onSubmit = async (data: RegisterForm) => {
+  const onSubmit = async (data: RecoverForm) => {
     try {
       setError(null);
-      const res = await registerUser(data.username, data.password);
-      setRecoveryKey(res.recoveryKey);
+      await recoverAccount(data.username, data.recoveryKey, data.newPassword);
+      setSuccess(true);
+      setTimeout(() => navigate('/login'), 3000);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Registration failed. Please try again.');
+      setError(err.response?.data?.error || 'Recovery failed. Invalid key or username.');
     }
   };
 
@@ -43,14 +45,14 @@ export default function RegisterPage() {
       <div className="absolute inset-0 z-0 opacity-40">
         <img 
           src="/retro_surreal_bg.png" 
-          className="w-full h-full object-cover filter contrast-125 hue-rotate-180 scale-125"
+          className="w-full h-full object-cover filter contrast-125 hue-rotate-90 scale-125"
           alt="Surreal background"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-transparent to-transparent" />
       </div>
 
       <motion.div
-        initial={{ opacity: 0, scale: 0.8, rotate: 5 }}
+        initial={{ opacity: 0, scale: 0.8, rotate: -2 }}
         animate={{ opacity: 1, scale: 1, rotate: 0 }}
         transition={{ type: 'spring', damping: 15 }}
         className="w-full max-w-md z-10"
@@ -64,12 +66,12 @@ export default function RegisterPage() {
             <motion.div
               initial={{ y: -20 }}
               animate={{ y: 0 }}
-              className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-accent shadow-[4px_4px_0px_0px_#000] border-2 border-black mb-6"
+              className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary shadow-[4px_4px_0px_0px_#000] border-2 border-black mb-6"
             >
-              <UserPlus className="text-black" size={32} />
+              <KeyRound className="text-white" size={32} />
             </motion.div>
-            <h1 className="text-4xl font-display text-white mb-2 italic tracking-tight">Birth an Identity</h1>
-            <p className="text-accent font-bold text-xs uppercase tracking-[0.2em]">Join the collective consciousness</p>
+            <h1 className="text-4xl font-display text-white mb-2 italic tracking-tight">Recover Identity</h1>
+            <p className="text-accent font-bold text-xs uppercase tracking-[0.2em]">Unlock the void</p>
           </div>
 
           {error && (
@@ -83,29 +85,16 @@ export default function RegisterPage() {
             </motion.div>
           )}
 
-          {recoveryKey ? (
+          {success ? (
             <motion.div 
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               className="text-center space-y-6"
             >
-              <div className="bg-primary/10 border border-primary p-6 rounded-2xl relative group">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-primary mb-2">Your Secret Recovery Key</p>
-                <p className="font-mono text-xl text-white break-all">{recoveryKey}</p>
+              <div className="bg-accent/10 border border-accent p-6 rounded-2xl">
+                <p className="text-accent font-bold text-lg mb-2">Identity Recovered!</p>
+                <p className="text-white/70 text-sm">Your new seal has been forged. Redirecting to portal...</p>
               </div>
-              <div className="bg-danger/20 border border-danger/50 p-4 rounded-xl flex items-start gap-3 text-left">
-                <Wand2 className="text-danger flex-shrink-0 mt-0.5" size={16} />
-                <p className="text-xs text-danger/90 leading-relaxed font-bold">
-                  SAVE THIS KEY IMMEDIATELY. We do not use email. If you lose your password, this is the ONLY way to recover your account. It will never be shown again.
-                </p>
-              </div>
-              <Button
-                onClick={() => navigate('/')}
-                variant="primary"
-                className="w-full h-14 rounded-2xl text-lg font-bold"
-              >
-                I have saved it. Enter NexChat.
-              </Button>
             </motion.div>
           ) : (
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
@@ -116,18 +105,29 @@ export default function RegisterPage() {
                   type="text"
                   placeholder="aadi_observer"
                   error={errors.username?.message}
-                  className="bg-black/40 border-white/10 h-14 rounded-xl focus:border-accent/50 text-white placeholder:text-white/20"
+                  className="bg-black/40 border-white/10 h-14 rounded-xl focus:border-primary/50 text-white placeholder:text-white/20"
                 />
               </div>
 
               <div className="space-y-2">
-                <label className="text-[10px] font-bold uppercase tracking-widest text-white/40 ml-4">Secure Seal</label>
+                <label className="text-[10px] font-bold uppercase tracking-widest text-white/40 ml-4">Secret Recovery Key</label>
                 <Input
-                  {...register('password')}
+                  {...register('recoveryKey')}
+                  type="text"
+                  placeholder="nex-r-..."
+                  error={errors.recoveryKey?.message}
+                  className="bg-black/40 border-white/10 h-14 rounded-xl focus:border-primary/50 text-white placeholder:text-white/20 font-mono"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold uppercase tracking-widest text-white/40 ml-4">New Secure Seal</label>
+                <Input
+                  {...register('newPassword')}
                   type="password"
                   placeholder="••••••••"
-                  error={errors.password?.message}
-                  className="bg-black/40 border-white/10 h-14 rounded-xl focus:border-accent/50 text-white placeholder:text-white/20"
+                  error={errors.newPassword?.message}
+                  className="bg-black/40 border-white/10 h-14 rounded-xl focus:border-primary/50 text-white placeholder:text-white/20"
                 />
               </div>
 
@@ -141,20 +141,11 @@ export default function RegisterPage() {
                   className="relative z-10 flex items-center gap-2"
                   whileHover={{ scale: 1.05 }}
                 >
-                  {isSubmitting ? 'Manifesting...' : 'Manifest Identity'}
+                  {isSubmitting ? 'Forging...' : 'Forge New Seal'}
                   <Sparkles size={18} />
                 </motion.span>
               </Button>
             </form>
-          )}
-
-          {!recoveryKey && (
-            <p className="text-center mt-8 text-sm text-white/40">
-              Already manifested?{' '}
-              <Link to="/login" className="text-primary font-bold hover:underline italic">
-                Recall identity
-              </Link>
-            </p>
           )}
         </div>
       </motion.div>

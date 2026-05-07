@@ -10,7 +10,7 @@ import { Button } from '../../components/Button';
 import { Input } from '../../components/Input';
 
 const loginSchema = z.object({
-  email: z.string().email('Invalid email address'),
+  username: z.string().min(3, 'Username must be at least 3 characters'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
 });
 
@@ -27,7 +27,7 @@ export default function LoginPage() {
   const onSubmit = async (data: LoginForm) => {
     try {
       setError(null);
-      await login(data.email, data.password);
+      await login(data.username, data.password);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       setError(err.response?.data?.error || 'Login failed. Please try again.');
@@ -87,12 +87,12 @@ export default function LoginPage() {
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             <div className="space-y-2">
-              <label className="text-[10px] font-bold uppercase tracking-widest text-white/40 ml-4">Registry Email</label>
+              <label className="text-[10px] font-bold uppercase tracking-widest text-white/40 ml-4">Entity Handle</label>
               <Input
-                {...register('email')}
-                type="email"
-                placeholder="you@nebula.com"
-                error={errors.email?.message}
+                {...register('username')}
+                type="text"
+                placeholder="aadi_observer"
+                error={errors.username?.message}
                 className="bg-black/40 border-white/10 h-14 rounded-xl focus:border-primary/50 text-white placeholder:text-white/20"
               />
             </div>
@@ -124,12 +124,17 @@ export default function LoginPage() {
             </Button>
           </form>
 
-          <p className="text-center mt-8 text-sm text-white/40">
-            Lost your way?{' '}
-            <Link to="/register" className="text-accent font-bold hover:underline italic">
-              Create a new identity
+          <div className="flex justify-between items-center mt-8">
+            <p className="text-sm text-white/40">
+              Lost your way?{' '}
+              <Link to="/register" className="text-accent font-bold hover:underline italic">
+                Create a new identity
+              </Link>
+            </p>
+            <Link to="/recover" className="text-sm text-primary/60 hover:text-primary transition-colors italic">
+              Forgot Secret?
             </Link>
-          </p>
+          </div>
         </div>
       </motion.div>
     </div>

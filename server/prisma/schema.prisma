@@ -11,13 +11,13 @@ datasource db {
 }
 
 model User {
-  id         String   @id @default(uuid())
-  email      String   @unique
-  username   String   @unique
-  avatarUrl  String?  @map("avatar_url")
-  passwordH  String   @map("password_h")
-  createdAt  DateTime @default(now()) @map("created_at")
-  lastSeen   DateTime @default(now()) @map("last_seen")
+  id           String   @id @default(uuid())
+  username     String   @unique
+  avatarUrl    String?  @map("avatar_url")
+  passwordH    String   @map("password_h")
+  recoveryKeyH String   @map("recovery_key_h")
+  createdAt    DateTime @default(now()) @map("created_at")
+  lastSeen     DateTime @default(now()) @map("last_seen")
 
   messages           Message[]
   channelMemberships ChannelMember[]

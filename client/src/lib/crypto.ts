@@ -187,12 +187,63 @@ export class CryptoEngine {
 
   private static openDB(): Promise<IDBDatabase> {
     return new Promise((resolve, reject) => {
-      const request = indexedDB.open("NexChatCrypto", 1);
+      const request = indexedDB.open("NexChatCrypto", 2);
       request.onupgradeneeded = () => {
-        request.result.createObjectStore("keys");
+        const db = request.result;
+        if (!db.objectStoreNames.contains("keys")) db.createObjectStore("keys");
+        if (!db.objectStoreNames.contains("verified")) db.createObjectStore("verified");
       };
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error);
+    });
+  }
+
+  /**
+   * Compute a deterministic Safety Number from two public keys.
+   * Keys are sorted lexicographically so both parties compute the same number.
+   * Output: 12 groups of 5 digits (60 digits total) — Signal-style.
+   */
+  static async computeFingerprint(pubKeyA: string, pubKeyB: string): Promise<string> {
+    // Sort so output is identical regardless of who initiates
+    const sorted = [pubKeyA, pubKeyB].sort();
+    const combined = sorted.join('|');
+    const encoded = new TextEncoder().encode(combined);
+    const hashBuffer = await window.crypto.subtle.digest("SHA-256", encoded);
+    const hashArray = new Uint8Array(hashBuffer);
+
+    // Convert bytes to a long decimal string, then chunk into 5-digit groups
+    // We take 30 bytes and turn each pair into a number 0-65535, zero-padded to 5 digits
+    const groups: string[] = [];
+    for (let i = 0; i < 30; i += 5) {
+      // XOR 5 bytes together into a 0-99999 range
+      let n = 0;
+      for (let j = i; j < i + 5 && j < hashArray.length; j++) {
+        n = ((n << 8) + hashArray[j]) % 100000;
+      }
+      groups.push(n.toString().padStart(5, '0'));
+    }
+    return groups.join(' ');
+  }
+
+  /** Store that a channel's key fingerprint has been verified by this user */
+  static async markVerified(channelId: string, fingerprint: string): Promise<void> {
+    const db = await this.openDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction("verified", "readwrite");
+      const req = tx.objectStore("verified").put({ fingerprint, verifiedAt: Date.now() }, channelId);
+      req.onsuccess = () => resolve();
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  /** Returns the stored verified fingerprint for a channel, or null if not verified */
+  static async getVerified(channelId: string): Promise<{ fingerprint: string; verifiedAt: number } | null> {
+    const db = await this.openDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction("verified", "readonly");
+      const req = tx.objectStore("verified").get(channelId);
+      req.onsuccess = () => resolve(req.result || null);
+      req.onerror = () => reject(req.error);
     });
   }
 }

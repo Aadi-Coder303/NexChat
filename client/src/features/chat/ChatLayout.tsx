@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import Sidebar from '../../components/Sidebar';
-import { Send, Hash, MoreVertical, Bell, Search, Sparkles, Ghost, Menu, Trash2, Edit3, Reply, Smile, ChevronUp, X, Check } from 'lucide-react';
+import { Send, Hash, MoreVertical, Bell, Search, Sparkles, Ghost, Menu, Trash2, Edit3, Reply, Smile, ChevronUp, X, Check, Shield, ShieldCheck } from 'lucide-react';
 import { Button } from '../../components/Button';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useChatStore, type Message } from '../../stores/chatStore';
@@ -9,6 +9,7 @@ import { Tooltip } from '../../components/Tooltip';
 import { CryptoEngine } from '../../lib/crypto';
 import { useAuthStore } from '../../stores/authStore';
 import { cn } from '../../lib/utils';
+import SafetyNumberModal from '../../components/SafetyNumberModal';
 
 const EMOJI_LIST = ['👍', '❤️', '😂', '😮', '😢', '🔥', '🎉', '👀'];
 
@@ -28,8 +29,13 @@ export default function ChatLayout() {
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; message: Message } | null>(null);
   const [emojiPickerFor, setEmojiPickerFor] = useState<string | null>(null);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [safetyModalOpen, setSafetyModalOpen] = useState(false);
+  const [isVerified, setIsVerified] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Derived state — hoisted so useEffects can reference it
+  const activeChannel = channels.find(c => c.id === activeChannelId);
 
   useEffect(() => {
     fetchChannels();
@@ -58,6 +64,18 @@ export default function ChatLayout() {
     return () => window.removeEventListener('click', handler);
   }, []);
 
+  // Check verification status when active channel changes
+  useEffect(() => {
+    if (!activeChannelId || !user?.publicKey) { setIsVerified(false); return; }
+    const them = activeChannel?.members?.find(m => m.user.id !== user.id);
+    if (!them?.user.publicKey || activeChannel?.type !== 'direct') { setIsVerified(false); return; }
+    CryptoEngine.getVerified(activeChannelId).then(async (stored) => {
+      if (!stored) return setIsVerified(false);
+      const fp = await CryptoEngine.computeFingerprint(user.publicKey!, them.user.publicKey!);
+      setIsVerified(stored.fingerprint === fp);
+    });
+  }, [activeChannelId, user, activeChannel]);
+
   // Decrypt messages as they arrive
   useEffect(() => {
     const decryptAll = async () => {
@@ -83,7 +101,6 @@ export default function ChatLayout() {
     decryptAll();
   }, [messages, activeChannelId, user]);
 
-  const activeChannel = channels.find(c => c.id === activeChannelId);
   const activeMessages = activeChannelId ? (messages[activeChannelId] || []) : [];
   const channelTypingUsers = activeChannelId ? (typingUsers[activeChannelId] || []) : [];
   const typingUsernames = channelTypingUsers
@@ -216,6 +233,25 @@ export default function ChatLayout() {
             </div>
           </div>
           <div className="flex items-center gap-3 lg:gap-6 text-white/30">
+            {/* Safety Number button — only for DMs where both parties have keys */}
+            {activeChannel?.type === 'direct' && user?.publicKey && (() => {
+              const them = activeChannel.members?.find(m => m.user.id !== user.id);
+              return them?.user.publicKey ? (
+                <Tooltip content={isVerified ? 'Keys verified ✓' : 'Verify safety number'}>
+                  <button
+                    onClick={() => setSafetyModalOpen(true)}
+                    className={cn(
+                      "p-2 rounded-xl transition-all",
+                      isVerified
+                        ? "text-green-400 bg-green-500/10 hover:bg-green-500/20"
+                        : "text-white/30 hover:text-amber-400 hover:bg-amber-400/10"
+                    )}
+                  >
+                    {isVerified ? <ShieldCheck size={18} /> : <Shield size={18} />}
+                  </button>
+                </Tooltip>
+              ) : null;
+            })()}
             <div className="hidden sm:flex items-center bg-white/5 rounded-full px-4 py-1.5 border border-white/10">
               <Search className="h-4 w-4 mr-2" />
               <input type="text" placeholder="Recall..." className="bg-transparent border-none text-[11px] focus:ring-0 w-32" />
@@ -490,6 +526,21 @@ export default function ChatLayout() {
           )}
         </AnimatePresence>
       </main>
+
+      {/* Safety Number Modal */}
+      {activeChannel?.type === 'direct' && activeChannelId && user?.publicKey && (() => {
+        const them = activeChannel.members?.find(m => m.user.id !== user.id);
+        return them?.user.publicKey ? (
+          <SafetyNumberModal
+            isOpen={safetyModalOpen}
+            onClose={() => setSafetyModalOpen(false)}
+            channelId={activeChannelId}
+            channelName={activeChannel.name || them.user.username}
+            myPublicKey={user.publicKey}
+            theirPublicKey={them.user.publicKey}
+          />
+        ) : null;
+      })()}
     </div>
   );
 }

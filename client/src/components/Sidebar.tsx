@@ -1,5 +1,6 @@
 import { LogOut, Hash, Plus, Ghost, Radio } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
+import { useChatStore } from '../stores/chatStore';
 import { Button } from './Button';
 import { cn } from '../lib/utils';
 import { motion } from 'framer-motion';
@@ -11,17 +12,21 @@ interface SidebarProps {
 
 export default function Sidebar({ activeChannelId, onChannelSelect }: SidebarProps) {
   const { user, logout } = useAuthStore();
+  const { channels, createChannel } = useChatStore();
 
-  const channels = [
-    { id: '1', name: 'void-stream', type: 'group' },
-    { id: '2', name: 'echo-chamber', type: 'group' },
-    { id: '3', name: 'static-noise', type: 'group' },
-  ];
+  const handleCreateChannel = async () => {
+    const name = window.prompt('Enter channel name:');
+    if (name && name.trim()) {
+      try {
+        await createChannel(name.trim(), 'group', [user!.id]);
+      } catch (error) {
+        alert('Failed to create channel');
+      }
+    }
+  };
 
-  const dms = [
-    { id: '4', name: 'aadi', status: 'online', avatar: '👁️' },
-    { id: '5', name: 'sarah', status: 'offline', avatar: '🌫️' },
-  ];
+  const groupChannels = channels.filter(c => c.type === 'group');
+  const directChannels = channels.filter(c => c.type === 'direct');
 
   return (
     <div className="w-80 bg-[#080808] flex flex-col border-r-2 border-white/5 h-full relative overflow-hidden">
@@ -33,7 +38,7 @@ export default function Sidebar({ activeChannelId, onChannelSelect }: SidebarPro
         <h1 className="text-2xl font-display text-white italic lowercase tracking-tighter flex items-center gap-2">
           NexChat <span className="h-2 w-2 rounded-full bg-primary animate-ping" />
         </h1>
-        <Button variant="outline" size="sm" className="h-10 w-10 p-0 rounded-2xl border-white/10 hover:border-primary/50">
+        <Button onClick={handleCreateChannel} variant="outline" size="sm" className="h-10 w-10 p-0 rounded-2xl border-white/10 hover:border-primary/50">
           <Plus className="h-5 w-5" />
         </Button>
       </div>
@@ -47,7 +52,7 @@ export default function Sidebar({ activeChannelId, onChannelSelect }: SidebarPro
             <span>Frequencies</span>
           </div>
           <div className="space-y-1">
-            {channels.map(channel => (
+            {groupChannels.map(channel => (
               <button
                 key={channel.id}
                 onClick={() => onChannelSelect(channel.id)}
@@ -68,6 +73,9 @@ export default function Sidebar({ activeChannelId, onChannelSelect }: SidebarPro
                 <span className="italic tracking-tight">{channel.name}</span>
               </button>
             ))}
+            {groupChannels.length === 0 && (
+              <div className="px-4 text-xs text-white/30 italic">No frequencies found.</div>
+            )}
           </div>
         </section>
 
@@ -78,7 +86,7 @@ export default function Sidebar({ activeChannelId, onChannelSelect }: SidebarPro
             <span>Apparitions</span>
           </div>
           <div className="space-y-1">
-            {dms.map(dm => (
+            {directChannels.map(dm => (
               <button
                 key={dm.id}
                 onClick={() => onChannelSelect(dm.id)}
@@ -90,17 +98,16 @@ export default function Sidebar({ activeChannelId, onChannelSelect }: SidebarPro
                 )}
               >
                 <div className="relative">
-                  <div className="h-10 w-10 rounded-[1rem] bg-white/5 border border-white/5 flex items-center justify-center text-lg filter grayscale group-hover:grayscale-0 transition-all">
-                    {dm.avatar}
+                  <div className="h-10 w-10 rounded-[1rem] bg-white/5 border border-white/5 flex items-center justify-center text-lg filter grayscale group-hover:grayscale-0 transition-all text-white">
+                    {dm.name.charAt(0).toUpperCase()}
                   </div>
-                  <div className={cn(
-                    "absolute -bottom-1 -right-1 h-3 w-3 rounded-full border-2 border-[#080808]",
-                    dm.status === 'online' ? "bg-accent shadow-[0_0_10px_rgba(16,185,129,0.5)]" : "bg-white/10"
-                  )} />
                 </div>
                 <span className="italic tracking-tight">{dm.name}</span>
               </button>
             ))}
+            {directChannels.length === 0 && (
+              <div className="px-4 text-xs text-white/30 italic">No apparitions found.</div>
+            )}
           </div>
         </section>
       </div>

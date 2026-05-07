@@ -1,18 +1,63 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Sidebar from '../../components/Sidebar';
 import { Send, Hash, MoreVertical, Bell, Search, Plus, Sparkles, Ghost } from 'lucide-react';
 import { Button } from '../../components/Button';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useChatStore } from '../../stores/chatStore';
+import { socketService } from '../../lib/socket';
 
 export default function ChatLayout() {
-  const [activeChannelId, setActiveChannelId] = useState('1');
-  const [message, setMessage] = useState('');
+  const { channels, activeChannelId, setActiveChannelId, messages, fetchChannels, onlineUsers } = useChatStore();
+  const [messageText, setMessageText] = useState('');
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const mockMessages = [
-    { id: '1', sender: 'aadi', content: 'Welcome to the NexChat dreamscape.', time: '10:30 AM', avatar: '🪐' },
-    { id: '2', sender: 'sarah', content: 'The surrealism is hitting hard. Love the grain.', time: '10:32 AM', avatar: '🎭' },
-    { id: '3', sender: 'aadi', content: 'Reality is just a suggestion here.', time: '10:33 AM', avatar: '🪐' },
-  ];
+  useEffect(() => {
+    fetchChannels();
+    socketService.connect();
+
+    return () => {
+      socketService.disconnect();
+    };
+  }, [fetchChannels]);
+
+  useEffect(() => {
+    if (channels.length > 0 && !activeChannelId) {
+      setActiveChannelId(channels[0].id);
+    }
+  }, [channels, activeChannelId, setActiveChannelId]);
+
+  useEffect(() => {
+    if (activeChannelId) {
+      socketService.joinChannel(activeChannelId);
+    }
+    return () => {
+      if (activeChannelId) {
+        socketService.leaveChannel(activeChannelId);
+      }
+    };
+  }, [activeChannelId]);
+
+  // Auto-scroll to bottom when messages change
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, activeChannelId]);
+
+  const activeChannel = channels.find(c => c.id === activeChannelId);
+  const activeMessages = activeChannelId ? (messages[activeChannelId] || []) : [];
+
+  const handleSendMessage = () => {
+    if (messageText.trim() && activeChannelId) {
+      socketService.sendMessage(activeChannelId, messageText.trim());
+      setMessageText('');
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
+    }
+  };
 
   return (
     <div className="flex h-screen bg-[#050505] overflow-hidden selection:bg-accent/30 font-mono">
@@ -38,10 +83,14 @@ export default function ChatLayout() {
               <Hash className="h-5 w-5 text-accent" />
             </div>
             <div className="flex flex-col">
-              <h2 className="text-xl font-display text-white italic tracking-tighter">#void-stream</h2>
+              <h2 className="text-xl font-display text-white italic tracking-tighter">
+                {activeChannel?.type === 'group' ? '#' : '@'}{activeChannel?.name || 'void-stream'}
+              </h2>
               <div className="flex items-center gap-2">
                 <div className="h-1.5 w-1.5 rounded-full bg-accent animate-pulse" />
-                <span className="text-[10px] font-bold text-white/30 uppercase tracking-[0.2em]">128 entities online</span>
+                <span className="text-[10px] font-bold text-white/30 uppercase tracking-[0.2em]">
+                  {Object.keys(onlineUsers).filter(id => onlineUsers[id] === 'online').length} entities online
+                </span>
               </div>
             </div>
           </div>
@@ -61,32 +110,38 @@ export default function ChatLayout() {
         {/* Message List with Surreal Motion */}
         <div className="flex-1 overflow-y-auto p-8 space-y-8 relative scroll-smooth">
           <AnimatePresence initial={false}>
-            {mockMessages.map((msg, index) => (
+            {activeMessages.map((msg, index) => {
+              const time = new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+              return (
               <motion.div
                 key={msg.id}
                 initial={{ opacity: 0, y: 20, filter: 'blur(10px)' }}
                 animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-                transition={{ type: 'spring', stiffness: 100, delay: index * 0.1 }}
+                transition={{ type: 'spring', stiffness: 100, delay: 0.05 }}
                 className="flex gap-6 group max-w-4xl mx-auto"
               >
-                <div className="h-12 w-12 rounded-[1.25rem] bg-white/5 border border-white/10 flex items-center justify-center text-2xl shadow-xl flex-shrink-0 group-hover:border-primary/50 transition-colors">
-                  {msg.avatar}
+                <div className="h-12 w-12 rounded-[1.25rem] bg-white/5 border border-white/10 flex items-center justify-center text-2xl shadow-xl flex-shrink-0 group-hover:border-primary/50 transition-colors text-white">
+                  {msg.sender.username.charAt(0).toUpperCase()}
                 </div>
                 <div className="flex flex-col flex-1">
                   <div className="flex items-baseline gap-3 mb-1">
-                    <span className="font-display text-sm text-primary italic lowercase tracking-tight">{msg.sender}</span>
-                    <span className="text-[9px] font-bold text-white/20 uppercase tracking-widest">{msg.time}</span>
+                    <span className="font-display text-sm text-primary italic lowercase tracking-tight">{msg.sender.username}</span>
+                    <span className="text-[9px] font-bold text-white/20 uppercase tracking-widest">{time}</span>
                   </div>
                   <div className="glass-retro px-5 py-3 rounded-2xl rounded-tl-none relative border-white/5 group-hover:border-white/10 transition-colors">
-                    <p className="text-sm text-white/80 leading-relaxed font-medium">
+                    <p className="text-sm text-white/80 leading-relaxed font-medium whitespace-pre-wrap">
                       {msg.content}
                     </p>
+                    {msg.clientTempId && (
+                      <span className="absolute -bottom-4 right-0 text-[8px] text-white/20 uppercase tracking-widest">Sending...</span>
+                    )}
                     <div className="absolute -left-2 top-0 w-2 h-2 bg-transparent border-t-[1px] border-l-[1px] border-white/10" />
                   </div>
                 </div>
               </motion.div>
-            ))}
+            )})}
           </AnimatePresence>
+          <div ref={messagesEndRef} />
         </div>
 
         {/* Message Input - Floating Surreal Panel */}
@@ -105,18 +160,20 @@ export default function ChatLayout() {
               </Button>
               
               <textarea
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
+                value={messageText}
+                onChange={(e) => setMessageText(e.target.value)}
+                onKeyDown={handleKeyDown}
                 placeholder="Broadcast your thoughts..."
-                className="flex-1 bg-transparent border-none focus:ring-0 text-sm text-white placeholder:text-white/20 py-3.5 resize-none min-h-[52px] font-medium"
+                className="flex-1 bg-transparent border-none focus:ring-0 text-sm text-white placeholder:text-white/20 py-3.5 resize-none min-h-[52px] max-h-[150px] overflow-y-auto font-medium"
                 rows={1}
               />
 
               <Button 
+                onClick={handleSendMessage}
                 size="icon" 
                 variant="accent"
                 className="rounded-full h-12 w-12 flex-shrink-0 shadow-[0_0_20px_rgba(16,185,129,0.3)] border-none"
-                disabled={!message.trim()}
+                disabled={!messageText.trim()}
               >
                 <Send className="h-5 w-5" />
               </Button>

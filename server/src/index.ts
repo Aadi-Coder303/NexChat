@@ -14,6 +14,14 @@ import { errorHandler } from './middleware/error.middleware';
 
 dotenv.config();
 
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught Exception:', error);
+});
+
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
@@ -71,7 +79,10 @@ app.use(errorHandler);
 const PORT = process.env.PORT || 3000;
 
 server.listen(PORT, () => {
+  const dbUrl = process.env.DATABASE_URL || '';
+  const maskedUrl = dbUrl.replace(/:([^:@]+)@/, ':****@');
   console.log(`🚀 NexChat Server running on http://localhost:${PORT}`);
+  console.log(`🔗 Database: ${maskedUrl.split('@')[1] || 'Unknown'}`);
 });
 
 export { app, io };

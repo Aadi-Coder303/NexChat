@@ -23,12 +23,15 @@ const recoverSchema = z.object({
 
 router.post('/register', async (req, res, next) => {
   try {
+    console.log(`[Auth] Registration attempt for username: ${req.body?.username}`);
     const validated = registerSchema.parse(req.body);
     const { user, accessToken, refreshToken, recoveryKey } = await AuthService.register(
       validated.username, 
       validated.password,
       validated.publicKey
     );
+    
+    console.log(`[Auth] Registration successful for: ${user.username} (${user.id})`);
     
     res.cookie('refresh_token', refreshToken, {
       httpOnly: true,

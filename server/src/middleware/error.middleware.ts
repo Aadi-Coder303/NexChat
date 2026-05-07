@@ -28,9 +28,8 @@ export const errorHandler = (err: any, req: Request, res: Response, next: NextFu
   // - Always show the message if we are NOT in production
   // - Always show the message if it's explicitly an AppError (expected error)
   const isProduction = process.env.NODE_ENV === 'production';
-  const displayMessage = (!isProduction || status < 500 || err.name === 'AppError') 
-    ? message 
-    : 'An unexpected error occurred';
+  // Temporarily surfacing message in production for debugging
+  const displayMessage = message; 
 
   res.status(status).json({
     error: displayMessage,

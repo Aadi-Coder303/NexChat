@@ -2,6 +2,14 @@ import { createClient } from 'redis';
 
 const redisClient = createClient({
   url: process.env.REDIS_URL || 'redis://localhost:6379',
+  socket: {
+    reconnectStrategy: (retries) => {
+      if (retries > 3) {
+        return false; // Stop retrying after 3 attempts
+      }
+      return 5000; // Retry every 5 seconds
+    }
+  }
 });
 
 let isRedisConnected = false;

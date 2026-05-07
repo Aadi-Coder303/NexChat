@@ -3,8 +3,6 @@ import crypto from 'crypto';
 import { prisma } from '../lib/prisma';
 import { generateAccessToken, generateRefreshToken } from '../lib/jwt';
 import { AppError } from '../utils/errors';
-import crypto from 'crypto';
-
 export class AuthService {
   private static generateFriendCode(): string {
     return crypto.randomBytes(4).toString('hex').substring(0, 7).toUpperCase();
@@ -25,15 +23,40 @@ export class AuthService {
     const recoveryKey = `nex-r-${crypto.randomBytes(8).toString('hex')}`;
     const hashedRecoveryKey = await argon2.hash(recoveryKey);
     
-    const user = await prisma.user.create({
-      data: {
-        username,
-        passwordH: hashedPassword,
-        recoveryKeyH: hashedRecoveryKey,
-        publicKey,
-        friendCode: this.generateFriendCode(),
-      },
-    });
+    // Try to create user, handling friendCode collisions
+    let user;
+    let attempts = 0;
+    const maxAttempts = 5;
+
+    while (attempts < maxAttempts) {
+      try {
+        user = await prisma.user.create({
+          data: {
+            username,
+            passwordH: hashedPassword,
+            recoveryKeyH: hashedRecoveryKey,
+            publicKey,
+            friendCode: this.generateFriendCode(),
+          },
+        });
+        break; // Success!
+      } catch (error: any) {
+        console.error('[AuthService] Registration error:', error);
+        attempts++;
+        // P2002 is Prisma's unique constraint violation error
+        if (error.code === 'P2002' && error.meta?.target?.includes('friend_code')) {
+          if (attempts >= maxAttempts) {
+            throw new AppError('Failed to generate a unique friend code after multiple attempts', 500);
+          }
+          continue; // Try again with a new code
+        }
+        throw error; // Other error, rethrow
+      }
+    }
+
+    if (!user) {
+      throw new AppError('Failed to create user', 500);
+    }
 
     const accessToken = generateAccessToken(user.id);
     const refreshToken = generateRefreshToken(user.id);

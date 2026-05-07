@@ -58,6 +58,7 @@ export default function RegisterPage() {
       setRecoveryKey(res.recoveryKey);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
+      console.error('Registration Error:', err);
       setError(err.response?.data?.error || 'Registration failed. Please try again.');
     }
   };

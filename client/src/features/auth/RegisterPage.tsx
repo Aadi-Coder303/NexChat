@@ -14,6 +14,10 @@ import { CryptoEngine } from '../../lib/crypto';
 const registerSchema = z.object({
   username: z.string().min(3, 'Username must be at least 3 characters'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
+  confirmPassword: z.string(),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords do not match",
+  path: ['confirmPassword'],
 });
 
 type RegisterForm = z.infer<typeof registerSchema>;
@@ -168,6 +172,19 @@ export default function RegisterPage() {
                   type="password"
                   placeholder="••••••••"
                   error={errors.password?.message}
+                  className="bg-black/40 border-white/10 h-14 rounded-xl focus:border-accent/50 text-white placeholder:text-white/20"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Tooltip content="Re-enter your Password">
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-white/40 ml-4 cursor-help">Confirm Seal</label>
+                </Tooltip>
+                <Input
+                  {...register('confirmPassword')}
+                  type="password"
+                  placeholder="••••••••"
+                  error={errors.confirmPassword?.message}
                   className="bg-black/40 border-white/10 h-14 rounded-xl focus:border-accent/50 text-white placeholder:text-white/20"
                 />
               </div>

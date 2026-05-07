@@ -5,6 +5,8 @@ export interface Channel {
   id: string;
   name: string;
   type: 'direct' | 'group';
+  inviteCode?: string | null;
+  createdById?: string | null;
   members?: {
     user: {
       id: string;
@@ -35,10 +37,10 @@ export interface Message {
 interface ChatState {
   channels: Channel[];
   activeChannelId: string | null;
-  messages: Record<string, Message[]>; // channelId -> Message[]
+  messages: Record<string, Message[]>;
   onlineUsers: Record<string, 'online' | 'offline'>;
   isLoadingChannels: boolean;
-  
+
   fetchChannels: () => Promise<void>;
   setActiveChannel: (id: string) => void;
   fetchMessages: (channelId: string) => Promise<void>;
@@ -47,6 +49,8 @@ interface ChatState {
   setOnlineStatus: (userId: string, status: 'online' | 'offline') => void;
   createChannel: (name: string, type: 'direct' | 'group', memberIds: string[]) => Promise<void>;
   connectByCode: (code: string) => Promise<void>;
+  joinByInviteCode: (code: string) => Promise<void>;
+  generateInviteCode: (channelId: string) => Promise<string>;
 }
 
 export const useChatStore = create<ChatState>((set, get) => ({
@@ -81,7 +85,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       set((state) => ({
         messages: {
           ...state.messages,
-          [channelId]: response.data.reverse(), // Reverse because API returns desc, we want asc for chat UI
+          [channelId]: response.data.reverse(),
         },
       }));
     } catch (error) {
@@ -142,5 +146,29 @@ export const useChatStore = create<ChatState>((set, get) => ({
       console.error('Failed to connect by code:', error);
       throw error;
     }
+  },
+
+  joinByInviteCode: async (code: string) => {
+    try {
+      const response = await api.post('/channels/join', { code });
+      set((state) => ({
+        channels: [response.data, ...state.channels],
+      }));
+      get().setActiveChannel(response.data.id);
+    } catch (error: any) {
+      console.error('Failed to join by invite code:', error);
+      throw error;
+    }
+  },
+
+  generateInviteCode: async (channelId: string) => {
+    const response = await api.post(`/channels/${channelId}/invite`);
+    // Update channel in store with new invite code
+    set((state) => ({
+      channels: state.channels.map((c) =>
+        c.id === channelId ? { ...c, inviteCode: response.data.code } : c
+      ),
+    }));
+    return response.data.code;
   },
 }));

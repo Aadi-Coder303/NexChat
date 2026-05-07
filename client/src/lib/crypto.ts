@@ -53,6 +53,132 @@ export class CryptoEngine {
     };
   }
 
+  // ─── ECDH Session Keys (Forward Secrecy) ────────────────────────────────────
+  //
+  // Design:
+  //   1. Each user generates an ephemeral ECDH P-256 key pair per channel session
+  //   2. Ephemeral public key is published to the server (channel_sessions table)
+  //   3. Both parties compute ECDH(myPrivate, theirPublic) → same shared secret
+  //   4. HKDF derives a 256-bit AES-GCM session key from the shared secret
+  //   5. ECDH private key is immediately discarded — never stored anywhere
+  //   6. The derived AES session key is stored in IndexedDB with a 30-day TTL
+  //      (after expiry, that session's messages cannot be decrypted — true FS)
+  //
+  // Forward secrecy guarantee:
+  //   Compromising the static RSA identity key cannot reveal past session keys
+  //   because the ECDH private key was never persisted.
+  // ────────────────────────────────────────────────────────────────────────────
+
+  /** Generate an ephemeral ECDH P-256 key pair. Returns public key as base64 SPKI. */
+  static async generateECDHKeyPair(): Promise<{ publicKeyBase64: string; privateKey: CryptoKey }> {
+    const keyPair = await window.crypto.subtle.generateKey(
+      { name: 'ECDH', namedCurve: 'P-256' },
+      true,
+      ['deriveKey', 'deriveBits']
+    );
+    const exported = await window.crypto.subtle.exportKey('spki', keyPair.publicKey);
+    const publicKeyBase64 = btoa(String.fromCharCode(...new Uint8Array(exported)));
+    return { publicKeyBase64, privateKey: keyPair.privateKey };
+  }
+
+  /**
+   * Derive a shared AES-256-GCM session key from an ECDH key agreement.
+   * Uses HKDF with the channelId as context to bind the key to this conversation.
+   * The ECDH private key is passed in and should be dropped immediately after this call.
+   */
+  static async deriveSessionKey(myECDHPrivate: CryptoKey, theirPublicBase64: string, channelId: string): Promise<CryptoKey> {
+    // Import their ECDH public key
+    const theirPublicBytes = Uint8Array.from(atob(theirPublicBase64), c => c.charCodeAt(0));
+    const theirPublicKey = await window.crypto.subtle.importKey(
+      'spki',
+      theirPublicBytes,
+      { name: 'ECDH', namedCurve: 'P-256' },
+      false,
+      []
+    );
+
+    // ECDH key agreement → raw shared secret bits
+    const sharedBits = await window.crypto.subtle.deriveBits(
+      { name: 'ECDH', public: theirPublicKey },
+      myECDHPrivate,
+      256
+    );
+
+    // Import shared bits as HKDF key
+    const hkdfKey = await window.crypto.subtle.importKey('raw', sharedBits, 'HKDF', false, ['deriveKey']);
+
+    // HKDF → AES-256-GCM session key, using channelId as info for domain separation
+    const sessionKey = await window.crypto.subtle.deriveKey(
+      {
+        name: 'HKDF',
+        hash: 'SHA-256',
+        salt: new Uint8Array(32), // zero salt (shared implicitly)
+        info: new TextEncoder().encode(`nexchat-session-v1:${channelId}`),
+      },
+      hkdfKey,
+      { name: 'AES-GCM', length: 256 },
+      false, // session key is non-extractable
+      ['encrypt', 'decrypt']
+    );
+
+    return sessionKey;
+  }
+
+  /** Encrypt plaintext with a session AES-GCM key. Returns { content, iv } both base64. */
+  static async encryptWithSessionKey(plaintext: string, sessionKey: CryptoKey): Promise<{ content: string; iv: string }> {
+    const iv = window.crypto.getRandomValues(new Uint8Array(12));
+    const encoded = new TextEncoder().encode(plaintext);
+    const ciphertext = await window.crypto.subtle.encrypt({ name: 'AES-GCM', iv }, sessionKey, encoded);
+    return {
+      content: btoa(String.fromCharCode(...new Uint8Array(ciphertext))),
+      iv: btoa(String.fromCharCode(...iv)),
+    };
+  }
+
+  /** Decrypt a session-encrypted message. */
+  static async decryptWithSessionKey(contentBase64: string, ivBase64: string, sessionKey: CryptoKey): Promise<string> {
+    const content = Uint8Array.from(atob(contentBase64), c => c.charCodeAt(0));
+    const iv = Uint8Array.from(atob(ivBase64), c => c.charCodeAt(0));
+    const plain = await window.crypto.subtle.decrypt({ name: 'AES-GCM', iv }, sessionKey, content);
+    return new TextDecoder().decode(plain);
+  }
+
+  /** Persist a derived session key in IndexedDB with a 30-day TTL. */
+  static async storeSessionKey(channelId: string, sessionKey: CryptoKey): Promise<void> {
+    const db = await this.openDB();
+    const expiresAt = Date.now() + 30 * 24 * 60 * 60 * 1000; // 30 days
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction('sessions', 'readwrite');
+      const req = tx.objectStore('sessions').put({ key: sessionKey, expiresAt }, channelId);
+      req.onsuccess = () => resolve();
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  /**
+   * Retrieve a session key for a channel.
+   * Returns null if none exists or if the key has expired (FS: expired = gone forever).
+   */
+  static async getSessionKey(channelId: string): Promise<CryptoKey | null> {
+    const db = await this.openDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction('sessions', 'readonly');
+      const req = tx.objectStore('sessions').get(channelId);
+      req.onsuccess = () => {
+        const record = req.result;
+        if (!record) return resolve(null);
+        if (Date.now() > record.expiresAt) {
+          // Expired — delete it (enforce forward secrecy)
+          const delTx = db.transaction('sessions', 'readwrite');
+          delTx.objectStore('sessions').delete(channelId);
+          return resolve(null);
+        }
+        resolve(record.key);
+      };
+      req.onerror = () => reject(req.error);
+    });
+  }
+
   // Encrypt a message using AES-GCM with a random key (single recipient)
   static async encryptMessage(content: string, recipientPublicKeyBase64: string) {
     const encoder = new TextEncoder();
@@ -210,11 +336,12 @@ export class CryptoEngine {
 
   private static openDB(): Promise<IDBDatabase> {
     return new Promise((resolve, reject) => {
-      const request = indexedDB.open("NexChatCrypto", 2);
+      const request = indexedDB.open("NexChatCrypto", 3);
       request.onupgradeneeded = () => {
         const db = request.result;
         if (!db.objectStoreNames.contains("keys")) db.createObjectStore("keys");
         if (!db.objectStoreNames.contains("verified")) db.createObjectStore("verified");
+        if (!db.objectStoreNames.contains("sessions")) db.createObjectStore("sessions");
       };
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error);

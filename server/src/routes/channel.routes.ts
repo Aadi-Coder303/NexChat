@@ -65,6 +65,46 @@ router.post('/:id/invite', async (req: any, res, next) => {
   }
 });
 
+// Publish this user's ephemeral ECDH public key for forward secrecy
+router.post('/:id/session', async (req: any, res, next) => {
+  try {
+    const { ephemeralPubKey } = req.body;
+    if (!ephemeralPubKey) return res.status(400).json({ error: 'ephemeralPubKey is required' });
+    // Verify user is a member
+    const member = await prisma.channelMember.findUnique({
+      where: { channelId_userId: { channelId: req.params.id, userId: req.userId } },
+    });
+    if (!member) return res.status(403).json({ error: 'Not a member of this channel' });
+
+    const session = await (prisma.channelSession as any).upsert({
+      where: { channelId_userId: { channelId: req.params.id, userId: req.userId } },
+      create: { channelId: req.params.id, userId: req.userId, ephemeralPubKey },
+      update: { ephemeralPubKey },
+    });
+    res.json(session);
+  } catch (error: any) {
+    next(error);
+  }
+});
+
+// Get all parties' ephemeral ECDH public keys for a channel
+router.get('/:id/session', async (req: any, res, next) => {
+  try {
+    const member = await prisma.channelMember.findUnique({
+      where: { channelId_userId: { channelId: req.params.id, userId: req.userId } },
+    });
+    if (!member) return res.status(403).json({ error: 'Not a member of this channel' });
+
+    const sessions = await (prisma.channelSession as any).findMany({
+      where: { channelId: req.params.id },
+      select: { userId: true, ephemeralPubKey: true, updatedAt: true },
+    });
+    res.json(sessions);
+  } catch (error: any) {
+    next(error);
+  }
+});
+
 // Leave a channel
 router.delete('/:id/leave', async (req: any, res, next) => {
   try {

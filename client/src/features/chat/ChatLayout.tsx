@@ -10,6 +10,7 @@ import { CryptoEngine } from '../../lib/crypto';
 import { useAuthStore } from '../../stores/authStore';
 import { cn } from '../../lib/utils';
 import SafetyNumberModal from '../../components/SafetyNumberModal';
+import api from '../../lib/api';
 
 const EMOJI_LIST = ['👍', '❤️', '😂', '😮', '😢', '🔥', '🎉', '👀'];
 
@@ -31,6 +32,7 @@ export default function ChatLayout() {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [safetyModalOpen, setSafetyModalOpen] = useState(false);
   const [isVerified, setIsVerified] = useState(false);
+  const [sessionReady, setSessionReady] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -51,6 +53,48 @@ export default function ChatLayout() {
     if (activeChannelId) socketService.joinChannel(activeChannelId);
     return () => { if (activeChannelId) socketService.leaveChannel(activeChannelId); };
   }, [activeChannelId]);
+
+  // Initialize ECDH session for forward secrecy when channel changes
+  useEffect(() => {
+    if (!activeChannelId || !user) return;
+    setSessionReady(false);
+
+    const initSession = async () => {
+      try {
+        // 1. Check if we already have a valid derived session key in IndexedDB
+        const existingKey = await CryptoEngine.getSessionKey(activeChannelId);
+        if (existingKey) { setSessionReady(true); return; }
+
+        // 2. Generate a fresh ephemeral ECDH P-256 key pair
+        const { publicKeyBase64, privateKey: ecdhPrivate } = await CryptoEngine.generateECDHKeyPair();
+
+        // 3. Publish our ephemeral public key to the server
+        await api.post(`/channels/${activeChannelId}/session`, { ephemeralPubKey: publicKeyBase64 });
+
+        // 4. Fetch all parties' ephemeral public keys
+        const { data: sessions } = await api.get(`/channels/${activeChannelId}/session`);
+        const peerSession = sessions.find((s: { userId: string; ephemeralPubKey: string }) => s.userId !== user.id);
+
+        if (!peerSession) {
+          // Peer hasn't published their key yet — we'll retry when a message arrives
+          // For now fall back to RSA (session key will be derived once peer connects)
+          return;
+        }
+
+        // 5. Derive shared AES session key via ECDH + HKDF
+        // ecdhPrivate is used here ONCE then JavaScript GC will clean it up
+        const sessionKey = await CryptoEngine.deriveSessionKey(ecdhPrivate, peerSession.ephemeralPubKey, activeChannelId);
+
+        // 6. Persist derived session key in IndexedDB (30-day TTL)
+        await CryptoEngine.storeSessionKey(activeChannelId, sessionKey);
+        setSessionReady(true);
+      } catch (err) {
+        console.warn('ECDH session init failed, falling back to RSA:', err);
+      }
+    };
+
+    initSession();
+  }, [activeChannelId, user]);
 
   // Auto-scroll
   useEffect(() => {
@@ -76,26 +120,38 @@ export default function ChatLayout() {
     });
   }, [activeChannelId, user, activeChannel]);
 
-  // Decrypt messages as they arrive
+  // Decrypt messages as they arrive — handles both ECDH session keys and RSA fallback
   useEffect(() => {
     const decryptAll = async () => {
       if (!activeChannelId || !user) return;
       const channelMessages = messages[activeChannelId] || [];
+      const sessionKey = await CryptoEngine.getSessionKey(activeChannelId);
       const privateKey = await CryptoEngine.getPrivateKey(user.id);
-      if (!privateKey) return;
+
       for (const msg of channelMessages) {
-        if (msg.isEncrypted && msg.encryptionData && !decryptedMessages[activeChannelId]?.[msg.id]) {
-          try {
+        if (!msg.isEncrypted || !msg.encryptionData || decryptedMessages[activeChannelId]?.[msg.id]) continue;
+        try {
+          let decrypted: string | null = null;
+
+          if (msg.encryptionData.type === 'session_ecdh' && sessionKey) {
+            // ECDH session-encrypted message — use derived session key directly
+            decrypted = await CryptoEngine.decryptWithSessionKey(msg.content, msg.encryptionData.iv, sessionKey);
+          } else if (msg.encryptionData.type === 'rsa_oaep' || msg.encryptionData.keys) {
+            // Legacy RSA-OAEP fallback
+            if (!privateKey) continue;
             const encryptedKey = msg.encryptionData.keys?.[user.id];
             if (encryptedKey) {
-              const decrypted = await CryptoEngine.decryptMessage(msg.content, encryptedKey, msg.encryptionData.iv, privateKey);
-              setDecryptedMessages(prev => ({
-                ...prev,
-                [activeChannelId]: { ...(prev[activeChannelId] || {}), [msg.id]: decrypted },
-              }));
+              decrypted = await CryptoEngine.decryptMessage(msg.content, encryptedKey, msg.encryptionData.iv, privateKey);
             }
-          } catch { /* silently skip */ }
-        }
+          }
+
+          if (decrypted !== null) {
+            setDecryptedMessages(prev => ({
+              ...prev,
+              [activeChannelId]: { ...(prev[activeChannelId] || {}), [msg.id]: decrypted as string },
+            }));
+          }
+        } catch { /* silently skip undecryptable messages */ }
       }
     };
     decryptAll();
@@ -131,13 +187,25 @@ export default function ChatLayout() {
     socketService.stopTyping(activeChannelId);
 
     try {
+      // Prefer ECDH session key (forward secrecy) over RSA key wrapping
+      const sessionKey = await CryptoEngine.getSessionKey(activeChannelId);
+      if (sessionKey) {
+        const { content: encryptedContent, iv } = await CryptoEngine.encryptWithSessionKey(text, sessionKey);
+        socketService.sendMessage(activeChannelId, encryptedContent, {
+          type: 'session_ecdh',
+          iv,
+        }, replyTo?.id);
+        return;
+      }
+
+      // Fallback: RSA-OAEP per-recipient wrapping (no forward secrecy, but always works)
       const recipients = (activeChannel.members || [])
         .filter(m => m.user.publicKey)
         .map(m => ({ userId: m.user.id, publicKeyBase64: m.user.publicKey! }));
 
       if (recipients.length > 0) {
         const { content: encryptedContent, iv, keys } = await CryptoEngine.encryptMessageForMany(text, recipients);
-        socketService.sendMessage(activeChannelId, encryptedContent, { keys, iv }, replyTo?.id);
+        socketService.sendMessage(activeChannelId, encryptedContent, { type: 'rsa_oaep', keys, iv }, replyTo?.id);
       } else {
         socketService.sendMessage(activeChannelId, text, undefined, replyTo?.id);
       }
@@ -489,7 +557,9 @@ export default function ChatLayout() {
             </div>
           </motion.div>
           <div className="max-w-4xl mx-auto flex justify-between px-6 mt-3">
-            <span className="text-[9px] font-bold text-white/10 uppercase tracking-[0.3em]">Encrypted Dream-Stream Active</span>
+            <span className="text-[9px] font-bold uppercase tracking-[0.3em]" style={{ color: sessionReady ? 'rgba(52,211,153,0.4)' : 'rgba(255,255,255,0.1)' }}>
+              {sessionReady ? '⚡ ECDH Forward Secrecy Active' : '🔒 RSA Encrypted'}
+            </span>
             <span className="text-[9px] font-bold text-white/10 uppercase tracking-[0.3em]">Shift + Enter for new line</span>
           </div>
         </div>

@@ -21,6 +21,7 @@ model User {
   createdChannels    Channel[]
   messages           Message[]
   reactions          Reaction[]
+  channelSessions    ChannelSession[]
 
   @@map("users")
 }
@@ -32,9 +33,10 @@ model Channel {
   inviteCode  String?         @unique @map("invite_code")
   createdById String?         @map("created_by")
   createdAt   DateTime        @default(now()) @map("created_at")
-  members     ChannelMember[]
-  createdBy   User?           @relation(fields: [createdById], references: [id])
-  messages    Message[]
+  members         ChannelMember[]
+  createdBy       User?            @relation(fields: [createdById], references: [id])
+  messages        Message[]
+  channelSessions ChannelSession[]
 
   @@map("channels")
 }
@@ -85,4 +87,19 @@ model Reaction {
 
   @@unique([messageId, userId, emoji])
   @@map("reactions")
+}
+
+/// Stores ephemeral ECDH P-256 public keys for session-level forward secrecy.
+/// Each user publishes a new ephemeral pubkey when starting a channel session.
+/// The corresponding private key is NEVER stored — only used to derive the session AES key.
+model ChannelSession {
+  channelId      String   @map("channel_id")
+  userId         String   @map("user_id")
+  ephemeralPubKey String  @map("ephemeral_pub_key")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+  channel        Channel  @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([channelId, userId])
+  @@map("channel_sessions")
 }

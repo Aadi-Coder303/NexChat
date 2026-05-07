@@ -30,8 +30,7 @@ export class CryptoEngine {
     };
   }
 
-  // Encrypt a message using AES-GCM with a random key
-  // Returns { encryptedContent: string; encryptedKey: string; iv: string }
+  // Encrypt a message using AES-GCM with a random key (single recipient)
   static async encryptMessage(content: string, recipientPublicKeyBase64: string) {
     const encoder = new TextEncoder();
     const data = encoder.encode(content);
@@ -72,6 +71,62 @@ export class CryptoEngine {
       content: btoa(String.fromCharCode(...new Uint8Array(encryptedContent))),
       key: btoa(String.fromCharCode(...new Uint8Array(encryptedAesKey))),
       iv: btoa(String.fromCharCode(...iv)),
+    };
+  }
+
+  /**
+   * Encrypt a message for MULTIPLE recipients.
+   * Uses ONE AES key + IV for the content, then wraps the AES key
+   * separately for each recipient's RSA public key.
+   * Returns: { content, iv, keys: { [userId]: encryptedAesKey } }
+   */
+  static async encryptMessageForMany(
+    content: string,
+    recipients: { userId: string; publicKeyBase64: string }[]
+  ) {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(content);
+
+    // 1. Single AES key for the content
+    const aesKey = await window.crypto.subtle.generateKey(
+      { name: "AES-GCM", length: 256 },
+      true,
+      ["encrypt", "decrypt"]
+    );
+
+    // 2. Encrypt content once
+    const iv = window.crypto.getRandomValues(new Uint8Array(12));
+    const encryptedContent = await window.crypto.subtle.encrypt(
+      { name: "AES-GCM", iv },
+      aesKey,
+      data
+    );
+
+    const exportedAesKey = await window.crypto.subtle.exportKey("raw", aesKey);
+
+    // 3. Wrap the AES key for each recipient
+    const keys: Record<string, string> = {};
+    for (const { userId, publicKeyBase64 } of recipients) {
+      const pubKeyBuffer = Uint8Array.from(atob(publicKeyBase64), c => c.charCodeAt(0));
+      const pubKey = await window.crypto.subtle.importKey(
+        "spki",
+        pubKeyBuffer,
+        { name: "RSA-OAEP", hash: "SHA-256" },
+        true,
+        ["encrypt"]
+      );
+      const encryptedAesKey = await window.crypto.subtle.encrypt(
+        { name: "RSA-OAEP" },
+        pubKey,
+        exportedAesKey
+      );
+      keys[userId] = btoa(String.fromCharCode(...new Uint8Array(encryptedAesKey)));
+    }
+
+    return {
+      content: btoa(String.fromCharCode(...new Uint8Array(encryptedContent))),
+      iv: btoa(String.fromCharCode(...iv)),
+      keys,
     };
   }
 

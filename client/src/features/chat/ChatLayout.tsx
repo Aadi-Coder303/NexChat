@@ -98,35 +98,22 @@ export default function ChatLayout() {
     setMessageText('');
 
     try {
-      // E2EE: Encrypt for all members
-      const membersWithKeys = activeChannel.members?.filter(m => m.user.publicKey) || [];
-      
-      if (membersWithKeys.length > 0) {
-        // Simplified for MVP: Encrypt with a single AES key and wrap it for each member
-        // (Wait, my CryptoEngine currently encrypts for ONE recipient).
-        // I'll update CryptoEngine or just loop for now (less efficient but works).
-        
-        // Actually, for this first pass, let's just encrypt for the "main" recipient if it's a DM, 
-        // or everyone if it's a group.
-        
-        const encryptionData: any = { keys: {}, iv: '' };
-        let encryptedPayload: any = null;
+      // E2EE: collect all members that have a public key
+      const recipients = (activeChannel.members || [])
+        .filter(m => m.user.publicKey)
+        .map(m => ({ userId: m.user.id, publicKeyBase64: m.user.publicKey! }));
 
-        for (const member of membersWithKeys) {
-          const result = await CryptoEngine.encryptMessage(text, member.user.publicKey!);
-          encryptionData.keys[member.user.id] = result.key;
-          encryptionData.iv = result.iv;
-          encryptedPayload = result.content; // Content is the same for all, just the key is different
-        }
-
-        socketService.sendMessage(activeChannelId, encryptedPayload, encryptionData);
+      if (recipients.length > 0) {
+        // Encrypt the content ONCE with one AES key, wrap that key for each recipient
+        const { content: encryptedContent, iv, keys } = await CryptoEngine.encryptMessageForMany(text, recipients);
+        const encryptionData = { keys, iv };
+        socketService.sendMessage(activeChannelId, encryptedContent, encryptionData);
       } else {
-        // Fallback to plaintext if no one has keys (should not happen for new users)
+        // No public keys yet — send plaintext as fallback
         socketService.sendMessage(activeChannelId, text);
       }
     } catch (err) {
       console.error('Encryption failed:', err);
-      // Fallback
       socketService.sendMessage(activeChannelId, text);
     }
   };

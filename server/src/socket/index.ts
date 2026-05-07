@@ -67,11 +67,11 @@ export const setupSocketHandlers = (io: Server) => {
     socket.on('message:send', async ({ channelId, content, clientTempId, isEncrypted, encryptionData }) => {
       try {
         const message = await MessageService.sendMessage(channelId, userId, content, isEncrypted, encryptionData);
-        
-        // Broadcast to everyone in the channel
-        io.to(`channel:${channelId}`).emit('message:new', message);
-        
-        // Send ACK back to sender
+
+        // Broadcast to everyone EXCEPT the sender (they already have the optimistic message)
+        socket.to(`channel:${channelId}`).emit('message:new', message);
+
+        // Send ACK back to sender with the real server ID
         socket.emit('message:ack', { clientTempId, serverId: message.id });
       } catch (error: any) {
         socket.emit('error', { message: error.message });

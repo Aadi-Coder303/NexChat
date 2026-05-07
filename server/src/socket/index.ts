@@ -4,6 +4,20 @@ import { prisma } from '../lib/prisma';
 import { MessageService } from '../services/message.service';
 import { PresenceService } from '../services/presence.service';
 
+const rateLimitTracker = new Map<string, number[]>();
+
+const checkRateLimit = (socketId: string) => {
+  const now = Date.now();
+  let timestamps = rateLimitTracker.get(socketId) || [];
+  timestamps = timestamps.filter(t => now - t < 10000); // last 10 seconds
+  timestamps.push(now);
+  rateLimitTracker.set(socketId, timestamps);
+  
+  if (timestamps.length > 20) {
+    return false; // Limit exceeded (max 20 msgs / 10s)
+  }
+  return true;
+};
 export const setupSocketHandlers = (io: Server) => {
   // Auth middleware
   io.use((socket, next) => {
@@ -46,6 +60,7 @@ export const setupSocketHandlers = (io: Server) => {
 
     // Send a new message
     socket.on('message:send', async ({ channelId, content, clientTempId, isEncrypted, encryptionData, replyToId }) => {
+      if (!checkRateLimit(socket.id)) return socket.emit('error', { message: 'Rate limit exceeded. Please slow down.' });
       try {
         const message = await MessageService.sendMessage(channelId, userId, content, isEncrypted, encryptionData, replyToId);
         // Send to others in the channel
@@ -97,6 +112,7 @@ export const setupSocketHandlers = (io: Server) => {
     });
 
     socket.on('disconnect', async () => {
+      rateLimitTracker.delete(socket.id);
       console.log(`👋 User disconnected: ${userId}`);
       await PresenceService.setOffline(userId);
       io.emit('presence:update', { userId, status: 'offline' });

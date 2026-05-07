@@ -39,6 +39,10 @@ export class MessageService {
     encryptionData?: any,
     replyToId?: string,
   ) {
+    if (!content || content.length > 20000) {
+      throw new AppError('Message is either empty or exceeds the maximum length of 20,000 characters', 400);
+    }
+
     const membership = await prisma.channelMember.findUnique({
       where: { channelId_userId: { channelId, userId: senderId } },
     });
@@ -82,6 +86,10 @@ export class MessageService {
   }
 
   static async editMessage(messageId: string, userId: string, newContent: string) {
+    if (!newContent || newContent.length > 20000) {
+      throw new AppError('Message is either empty or exceeds the maximum length of 20,000 characters', 400);
+    }
+
     const message = await prisma.message.findUnique({ where: { id: messageId } });
     if (!message) throw new AppError('Message not found', 404);
     if (message.senderId !== userId) throw new AppError('You can only edit your own messages', 403);

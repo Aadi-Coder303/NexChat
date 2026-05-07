@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import Sidebar from '../../components/Sidebar';
-import { Send, Hash, MoreVertical, Bell, Search, Plus, Sparkles, Ghost, Menu, X } from 'lucide-react';
+import { Send, Hash, MoreVertical, Bell, Search, Plus, Sparkles, Ghost, Menu } from 'lucide-react';
 import { Button } from '../../components/Button';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useChatStore } from '../../stores/chatStore';
@@ -8,10 +8,11 @@ import { socketService } from '../../lib/socket';
 import { Tooltip } from '../../components/Tooltip';
 import { CryptoEngine } from '../../lib/crypto';
 import { useAuthStore } from '../../stores/authStore';
+import { cn } from '../../lib/utils';
 
 export default function ChatLayout() {
   const { user } = useAuthStore();
-  const { channels, activeChannelId, setActiveChannel, messages, fetchChannels, onlineUsers, addMessage } = useChatStore();
+  const { channels, activeChannelId, setActiveChannel, messages, fetchChannels, onlineUsers } = useChatStore();
   const [decryptedMessages, setDecryptedMessages] = useState<Record<string, Record<string, string>>>({}); // channelId -> messageId -> decryptedContent
   const [messageText, setMessageText] = useState('');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);

@@ -122,8 +122,12 @@ export class CryptoEngine {
 
   static async getPrivateKey(userId: string): Promise<CryptoKey | null> {
     const db = await this.openDB();
-    const tx = db.transaction("keys", "readonly");
-    return tx.objectStore("keys").get(userId);
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction("keys", "readonly");
+      const request = tx.objectStore("keys").get(userId);
+      request.onsuccess = () => resolve(request.result || null);
+      request.onerror = () => reject(request.error);
+    });
   }
 
   private static openDB(): Promise<IDBDatabase> {

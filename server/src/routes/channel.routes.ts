@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { MessageService } from '../services/message.service';
 import { ChannelService } from '../services/channel.service';
+import { prisma } from '../lib/prisma';
 
 const router = Router();
 

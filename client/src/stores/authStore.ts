@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import api from '../lib/api';
+import { useChatStore } from './chatStore';
 
 interface User {
   id: string;
@@ -44,7 +45,9 @@ export const useAuthStore = create<AuthState>()(
       },
 
       logout: async () => {
-        await api.post('/auth/logout');
+        try { await api.post('/auth/logout'); } catch { /* ignore */ }
+        // Clear all chat state so another user doesn't see stale data
+        useChatStore.getState().reset();
         set({ user: null, accessToken: null });
       },
     }),

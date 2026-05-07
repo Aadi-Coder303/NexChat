@@ -6,36 +6,55 @@ const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:3000';
 
 class SocketService {
   private socket: Socket | null = null;
+  private typingTimer: ReturnType<typeof setTimeout> | null = null;
 
   connect() {
     if (this.socket?.connected) return;
-
     const token = useAuthStore.getState().accessToken;
     if (!token) return;
 
     this.socket = io(SOCKET_URL, {
       auth: { token },
-      transports: ['websocket', 'polling'], // Fallback to polling if websocket fails
+      transports: ['websocket', 'polling'],
     });
 
     this.socket.on('connect', () => {
       console.log('Socket connected');
-      // Re-join active channel on reconnect
       const activeChannel = useChatStore.getState().activeChannelId;
-      if (activeChannel) {
-        this.joinChannel(activeChannel);
-      }
+      if (activeChannel) this.joinChannel(activeChannel);
     });
 
+    // New message from another user
     this.socket.on('message:new', (message) => {
       useChatStore.getState().addMessage(message.channelId, message);
     });
 
-    this.socket.on('message:ack', ({ clientTempId, serverId }) => {
+    // ACK from server after our optimistic send — update temp ID with real data
+    this.socket.on('message:ack', ({ clientTempId, serverId, message }) => {
       const activeChannel = useChatStore.getState().activeChannelId;
       if (activeChannel) {
-        useChatStore.getState().updateMessageId(activeChannel, clientTempId, serverId);
+        useChatStore.getState().updateMessageId(activeChannel, clientTempId, serverId, message);
       }
+    });
+
+    // Message deleted
+    this.socket.on('message:deleted', ({ channelId, messageId, message }) => {
+      useChatStore.getState().deleteMessageLocally(channelId, messageId, message);
+    });
+
+    // Message edited
+    this.socket.on('message:edited', ({ channelId, message }) => {
+      useChatStore.getState().updateMessage(channelId, message);
+    });
+
+    // Reaction toggled
+    this.socket.on('message:reaction', ({ channelId, messageId, reactions }) => {
+      useChatStore.getState().updateReactions(channelId, messageId, reactions);
+    });
+
+    // Typing indicators
+    this.socket.on('typing:update', ({ channelId, userId, isTyping }) => {
+      useChatStore.getState().setTyping(channelId, userId, isTyping);
     });
 
     this.socket.on('presence:update', ({ userId, status }) => {
@@ -55,50 +74,63 @@ class SocketService {
   }
 
   joinChannel(channelId: string) {
-    if (this.socket?.connected) {
-      this.socket.emit('channel:join', { channelId });
-    }
+    this.socket?.connected && this.socket.emit('channel:join', { channelId });
   }
 
   leaveChannel(channelId: string) {
-    if (this.socket?.connected) {
-      this.socket.emit('channel:leave', { channelId });
-    }
+    this.socket?.connected && this.socket.emit('channel:leave', { channelId });
   }
 
-  sendMessage(channelId: string, content: string, encryptionData?: any) {
+  sendMessage(channelId: string, content: string, encryptionData?: any, replyToId?: string) {
     if (!this.socket?.connected) return;
-
     const clientTempId = Math.random().toString(36).substring(7);
-    
-    // Emit to server
-    this.socket.emit('message:send', { 
-      channelId, 
-      content, 
-      clientTempId, 
-      isEncrypted: !!encryptionData, 
-      encryptionData 
-    });
 
-    // Optimistic UI update
+    this.socket.emit('message:send', { channelId, content, clientTempId, isEncrypted: !!encryptionData, encryptionData, replyToId });
+
+    // Optimistic UI
     const currentUser = useAuthStore.getState().user;
     if (currentUser) {
       useChatStore.getState().addMessage(channelId, {
-        id: clientTempId, // Temporary ID until server ACKs
+        id: clientTempId,
         content,
         channelId,
         senderId: currentUser.id,
         isEncrypted: !!encryptionData,
         encryptionData,
+        replyToId: replyToId || null,
         createdAt: new Date().toISOString(),
-        sender: {
-          id: currentUser.id,
-          username: currentUser.username,
-          avatarUrl: null,
-        },
+        reactions: [],
+        sender: { id: currentUser.id, username: currentUser.username, avatarUrl: null },
         clientTempId,
       });
     }
+  }
+
+  deleteMessage(channelId: string, messageId: string) {
+    this.socket?.emit('message:delete', { channelId, messageId });
+  }
+
+  editMessage(channelId: string, messageId: string, content: string) {
+    this.socket?.emit('message:edit', { channelId, messageId, content });
+  }
+
+  reactToMessage(channelId: string, messageId: string, emoji: string) {
+    this.socket?.emit('message:react', { channelId, messageId, emoji });
+  }
+
+  // Debounced typing indicator — auto-stops after 2s of no keystrokes
+  emitTyping(channelId: string) {
+    if (!this.socket?.connected) return;
+    this.socket.emit('typing:start', { channelId });
+    if (this.typingTimer) clearTimeout(this.typingTimer);
+    this.typingTimer = setTimeout(() => {
+      this.socket?.emit('typing:stop', { channelId });
+    }, 2000);
+  }
+
+  stopTyping(channelId: string) {
+    if (this.typingTimer) clearTimeout(this.typingTimer);
+    this.socket?.emit('typing:stop', { channelId });
   }
 }
 

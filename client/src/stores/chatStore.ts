@@ -1,6 +1,13 @@
 import { create } from 'zustand';
 import api from '../lib/api';
 
+export interface Reaction {
+  id: string;
+  emoji: string;
+  userId: string;
+  user: { username: string };
+}
+
 export interface Channel {
   id: string;
   name: string;
@@ -25,6 +32,16 @@ export interface Message {
   isEncrypted?: boolean;
   encryptionData?: any;
   createdAt: string;
+  deletedAt?: string | null;
+  editedAt?: string | null;
+  replyToId?: string | null;
+  replyTo?: {
+    id: string;
+    content: string;
+    deletedAt?: string | null;
+    sender: { id: string; username: string };
+  } | null;
+  reactions?: Reaction[];
   sender: {
     id: string;
     username: string;
@@ -39,18 +56,29 @@ interface ChatState {
   activeChannelId: string | null;
   messages: Record<string, Message[]>;
   onlineUsers: Record<string, 'online' | 'offline'>;
+  unreadCounts: Record<string, number>;
+  typingUsers: Record<string, string[]>; // channelId -> userIds typing
+  hasMoreMessages: Record<string, boolean>;
   isLoadingChannels: boolean;
 
   fetchChannels: () => Promise<void>;
   setActiveChannel: (id: string) => void;
   fetchMessages: (channelId: string) => Promise<void>;
+  loadMoreMessages: (channelId: string) => Promise<void>;
   addMessage: (channelId: string, message: Message) => void;
-  updateMessageId: (channelId: string, clientTempId: string, serverId: string) => void;
+  updateMessage: (channelId: string, message: Message) => void;
+  deleteMessageLocally: (channelId: string, messageId: string, updatedMessage: Message) => void;
+  updateReactions: (channelId: string, messageId: string, reactions: Reaction[]) => void;
+  updateMessageId: (channelId: string, clientTempId: string, serverId: string, serverMessage?: Message) => void;
   setOnlineStatus: (userId: string, status: 'online' | 'offline') => void;
+  setTyping: (channelId: string, userId: string, isTyping: boolean) => void;
+  markChannelRead: (channelId: string) => void;
+  incrementUnread: (channelId: string) => void;
   createChannel: (name: string, type: 'direct' | 'group', memberIds: string[]) => Promise<void>;
   connectByCode: (code: string) => Promise<void>;
   joinByInviteCode: (code: string) => Promise<void>;
   generateInviteCode: (channelId: string) => Promise<string>;
+  leaveChannel: (channelId: string) => Promise<void>;
 }
 
 export const useChatStore = create<ChatState>((set, get) => ({
@@ -58,6 +86,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
   activeChannelId: null,
   messages: {},
   onlineUsers: {},
+  unreadCounts: {},
+  typingUsers: {},
+  hasMoreMessages: {},
   isLoadingChannels: false,
 
   fetchChannels: async () => {
@@ -73,8 +104,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
   setActiveChannel: (id) => {
     set({ activeChannelId: id });
-    const { messages } = get();
-    if (!messages[id]) {
+    get().markChannelRead(id);
+    if (!get().messages[id]) {
       get().fetchMessages(id);
     }
   },
@@ -82,93 +113,158 @@ export const useChatStore = create<ChatState>((set, get) => ({
   fetchMessages: async (channelId) => {
     try {
       const response = await api.get(`/channels/${channelId}/messages`);
+      const msgs: Message[] = response.data.reverse();
       set((state) => ({
-        messages: {
-          ...state.messages,
-          [channelId]: response.data.reverse(),
-        },
+        messages: { ...state.messages, [channelId]: msgs },
+        hasMoreMessages: { ...state.hasMoreMessages, [channelId]: msgs.length === 50 },
       }));
     } catch (error) {
       console.error('Failed to fetch messages:', error);
     }
   },
 
+  loadMoreMessages: async (channelId) => {
+    const existing = get().messages[channelId] || [];
+    if (existing.length === 0) return;
+    const cursor = existing[0].id;
+    try {
+      const response = await api.get(`/channels/${channelId}/messages?cursor=${cursor}&limit=50`);
+      const older: Message[] = response.data.reverse();
+      set((state) => ({
+        messages: { ...state.messages, [channelId]: [...older, ...existing] },
+        hasMoreMessages: { ...state.hasMoreMessages, [channelId]: older.length === 50 },
+      }));
+    } catch (error) {
+      console.error('Failed to load more messages:', error);
+    }
+  },
+
   addMessage: (channelId, message) => {
+    const activeId = get().activeChannelId;
     set((state) => ({
       messages: {
         ...state.messages,
         [channelId]: [...(state.messages[channelId] || []), message],
       },
+      unreadCounts: {
+        ...state.unreadCounts,
+        [channelId]: activeId === channelId ? 0 : (state.unreadCounts[channelId] || 0) + 1,
+      },
     }));
   },
 
-  updateMessageId: (channelId, clientTempId, serverId) => {
+  updateMessage: (channelId, message) => {
     set((state) => ({
       messages: {
         ...state.messages,
-        [channelId]: state.messages[channelId].map((msg) =>
-          msg.clientTempId === clientTempId ? { ...msg, id: serverId, clientTempId: undefined } : msg
+        [channelId]: (state.messages[channelId] || []).map((m) =>
+          m.id === message.id ? { ...m, ...message } : m
+        ),
+      },
+    }));
+  },
+
+  deleteMessageLocally: (channelId, messageId, updatedMessage) => {
+    set((state) => ({
+      messages: {
+        ...state.messages,
+        [channelId]: (state.messages[channelId] || []).map((m) =>
+          m.id === messageId ? { ...m, ...updatedMessage } : m
+        ),
+      },
+    }));
+  },
+
+  updateReactions: (channelId, messageId, reactions) => {
+    set((state) => ({
+      messages: {
+        ...state.messages,
+        [channelId]: (state.messages[channelId] || []).map((m) =>
+          m.id === messageId ? { ...m, reactions } : m
+        ),
+      },
+    }));
+  },
+
+  updateMessageId: (channelId, clientTempId, serverId, serverMessage) => {
+    set((state) => ({
+      messages: {
+        ...state.messages,
+        [channelId]: (state.messages[channelId] || []).map((msg) =>
+          msg.clientTempId === clientTempId
+            ? serverMessage
+              ? { ...serverMessage, clientTempId: undefined }
+              : { ...msg, id: serverId, clientTempId: undefined }
+            : msg
         ),
       },
     }));
   },
 
   setOnlineStatus: (userId, status) => {
+    set((state) => ({ onlineUsers: { ...state.onlineUsers, [userId]: status } }));
+  },
+
+  setTyping: (channelId, userId, isTyping) => {
+    set((state) => {
+      const current = state.typingUsers[channelId] || [];
+      return {
+        typingUsers: {
+          ...state.typingUsers,
+          [channelId]: isTyping
+            ? current.includes(userId) ? current : [...current, userId]
+            : current.filter((id) => id !== userId),
+        },
+      };
+    });
+  },
+
+  markChannelRead: (channelId) => {
+    set((state) => ({ unreadCounts: { ...state.unreadCounts, [channelId]: 0 } }));
+  },
+
+  incrementUnread: (channelId) => {
     set((state) => ({
-      onlineUsers: {
-        ...state.onlineUsers,
-        [userId]: status,
-      },
+      unreadCounts: { ...state.unreadCounts, [channelId]: (state.unreadCounts[channelId] || 0) + 1 },
     }));
   },
 
   createChannel: async (name, type, memberIds) => {
-    try {
-      const response = await api.post('/channels', { name, type, memberIds });
-      set((state) => ({
-        channels: [response.data, ...state.channels],
-      }));
-      get().setActiveChannel(response.data.id);
-    } catch (error) {
-      console.error('Failed to create channel:', error);
-      throw error;
-    }
+    const response = await api.post('/channels', { name, type, memberIds });
+    set((state) => ({ channels: [response.data, ...state.channels] }));
+    get().setActiveChannel(response.data.id);
   },
 
-  connectByCode: async (code: string) => {
-    try {
-      const response = await api.post('/channels/connect', { code });
-      set((state) => ({
-        channels: [response.data, ...state.channels],
-      }));
-      get().setActiveChannel(response.data.id);
-    } catch (error: any) {
-      console.error('Failed to connect by code:', error);
-      throw error;
-    }
+  connectByCode: async (code) => {
+    const response = await api.post('/channels/connect', { code });
+    set((state) => ({ channels: [response.data, ...state.channels] }));
+    get().setActiveChannel(response.data.id);
   },
 
-  joinByInviteCode: async (code: string) => {
-    try {
-      const response = await api.post('/channels/join', { code });
-      set((state) => ({
-        channels: [response.data, ...state.channels],
-      }));
-      get().setActiveChannel(response.data.id);
-    } catch (error: any) {
-      console.error('Failed to join by invite code:', error);
-      throw error;
-    }
+  joinByInviteCode: async (code) => {
+    const response = await api.post('/channels/join', { code });
+    set((state) => ({ channels: [response.data, ...state.channels] }));
+    get().setActiveChannel(response.data.id);
   },
 
-  generateInviteCode: async (channelId: string) => {
+  generateInviteCode: async (channelId) => {
     const response = await api.post(`/channels/${channelId}/invite`);
-    // Update channel in store with new invite code
     set((state) => ({
       channels: state.channels.map((c) =>
         c.id === channelId ? { ...c, inviteCode: response.data.code } : c
       ),
     }));
     return response.data.code;
+  },
+
+  leaveChannel: async (channelId) => {
+    await api.delete(`/channels/${channelId}/leave`);
+    set((state) => {
+      const channels = state.channels.filter((c) => c.id !== channelId);
+      return {
+        channels,
+        activeChannelId: state.activeChannelId === channelId ? (channels[0]?.id || null) : state.activeChannelId,
+      };
+    });
   },
 }));

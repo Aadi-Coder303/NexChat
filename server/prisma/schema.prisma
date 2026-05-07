@@ -20,6 +20,7 @@ model User {
   channelMemberships ChannelMember[]
   createdChannels    Channel[]
   messages           Message[]
+  reactions          Reaction[]
 
   @@map("users")
 }
@@ -51,18 +52,37 @@ model ChannelMember {
 }
 
 model Message {
-  id             String   @id @default(uuid())
-  channelId      String   @map("channel_id")
-  senderId       String   @map("sender_id")
+  id             String     @id @default(uuid())
+  channelId      String     @map("channel_id")
+  senderId       String     @map("sender_id")
   content        String
-  isEncrypted    Boolean  @default(false) @map("is_encrypted")
-  encryptionData Json?    @map("encryption_data")
-  metadata       Json     @default("{}")
-  readBy         String[] @default([]) @map("read_by")
-  createdAt      DateTime @default(now()) @map("created_at")
-  channel        Channel  @relation(fields: [channelId], references: [id], onDelete: Cascade)
-  sender         User     @relation(fields: [senderId], references: [id])
+  isEncrypted    Boolean    @default(false) @map("is_encrypted")
+  encryptionData Json?      @map("encryption_data")
+  metadata       Json       @default("{}")
+  readBy         String[]   @default([]) @map("read_by")
+  deletedAt      DateTime?  @map("deleted_at")
+  editedAt       DateTime?  @map("edited_at")
+  replyToId      String?    @map("reply_to_id")
+  createdAt      DateTime   @default(now()) @map("created_at")
+  channel        Channel    @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  sender         User       @relation(fields: [senderId], references: [id])
+  replyTo        Message?   @relation("MessageReplies", fields: [replyToId], references: [id])
+  replies        Message[]  @relation("MessageReplies")
+  reactions      Reaction[]
 
   @@index([channelId, createdAt(sort: Desc)])
   @@map("messages")
+}
+
+model Reaction {
+  id        String   @id @default(uuid())
+  messageId String   @map("message_id")
+  userId    String   @map("user_id")
+  emoji     String
+  createdAt DateTime @default(now()) @map("created_at")
+  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId, emoji])
+  @@map("reactions")
 }

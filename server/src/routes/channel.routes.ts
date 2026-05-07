@@ -19,12 +19,7 @@ router.get('/', async (req: any, res, next) => {
 router.post('/', async (req: any, res, next) => {
   try {
     const { name, type, memberIds } = req.body;
-    const channel = await ChannelService.createChannel(
-      name,
-      type,
-      req.userId,
-      memberIds || [req.userId]
-    );
+    const channel = await ChannelService.createChannel(name, type, req.userId, memberIds || [req.userId]);
     res.status(201).json(channel);
   } catch (error: any) {
     next(error);
@@ -35,27 +30,13 @@ router.post('/', async (req: any, res, next) => {
 router.post('/connect', async (req: any, res, next) => {
   try {
     const { code } = req.body;
-
     const friend = await prisma.user.findUnique({
       where: { friendCode: code.toUpperCase() },
       select: { id: true, username: true },
     });
-
-    if (!friend) {
-      return res.status(404).json({ error: 'Identity not found in the void' });
-    }
-
-    if (friend.id === req.userId) {
-      return res.status(400).json({ error: 'You cannot connect with your own apparition' });
-    }
-
-    const channel = await ChannelService.createChannel(
-      friend.username,
-      'direct',
-      req.userId,
-      [req.userId, friend.id]
-    );
-
+    if (!friend) return res.status(404).json({ error: 'Identity not found in the void' });
+    if (friend.id === req.userId) return res.status(400).json({ error: 'You cannot connect with your own apparition' });
+    const channel = await ChannelService.createChannel(friend.username, 'direct', req.userId, [req.userId, friend.id]);
     res.status(201).json(channel);
   } catch (error: any) {
     next(error);
@@ -66,9 +47,7 @@ router.post('/connect', async (req: any, res, next) => {
 router.post('/join', async (req: any, res, next) => {
   try {
     const { code } = req.body;
-    if (!code?.trim()) {
-      return res.status(400).json({ error: 'Invite code is required' });
-    }
+    if (!code?.trim()) return res.status(400).json({ error: 'Invite code is required' });
     const channel = await ChannelService.joinByInviteCode(code.trim(), req.userId);
     res.status(200).json(channel);
   } catch (error: any) {
@@ -79,9 +58,23 @@ router.post('/join', async (req: any, res, next) => {
 // Generate (or fetch existing) invite code for a group channel
 router.post('/:id/invite', async (req: any, res, next) => {
   try {
-    const { id } = req.params;
-    const code = await ChannelService.generateInviteCode(id, req.userId);
+    const code = await ChannelService.generateInviteCode(req.params.id, req.userId);
     res.json({ code });
+  } catch (error: any) {
+    next(error);
+  }
+});
+
+// Leave a channel
+router.delete('/:id/leave', async (req: any, res, next) => {
+  try {
+    const { id } = req.params;
+    const member = await prisma.channelMember.findUnique({
+      where: { channelId_userId: { channelId: id, userId: req.userId } },
+    });
+    if (!member) return res.status(404).json({ error: 'You are not in this channel' });
+    await prisma.channelMember.delete({ where: { channelId_userId: { channelId: id, userId: req.userId } } });
+    res.json({ ok: true });
   } catch (error: any) {
     next(error);
   }
@@ -92,15 +85,45 @@ router.get('/:id/messages', async (req: any, res, next) => {
   try {
     const { id } = req.params;
     const { cursor, limit } = req.query;
-
-    const messages = await MessageService.getMessages(
-      id,
-      req.userId,
-      cursor as string,
-      limit ? parseInt(limit as string) : 50
-    );
-
+    const messages = await MessageService.getMessages(id, req.userId, cursor as string, limit ? parseInt(limit as string) : 50);
     res.json(messages);
+  } catch (error: any) {
+    next(error);
+  }
+});
+
+// Delete a message (soft delete)
+router.delete('/:channelId/messages/:messageId', async (req: any, res, next) => {
+  try {
+    const { messageId } = req.params;
+    const message = await MessageService.deleteMessage(messageId, req.userId);
+    res.json(message);
+  } catch (error: any) {
+    next(error);
+  }
+});
+
+// Edit a message
+router.put('/:channelId/messages/:messageId', async (req: any, res, next) => {
+  try {
+    const { messageId } = req.params;
+    const { content } = req.body;
+    if (!content?.trim()) return res.status(400).json({ error: 'Content is required' });
+    const message = await MessageService.editMessage(messageId, req.userId, content.trim());
+    res.json(message);
+  } catch (error: any) {
+    next(error);
+  }
+});
+
+// Toggle reaction on a message
+router.post('/:channelId/messages/:messageId/react', async (req: any, res, next) => {
+  try {
+    const { messageId } = req.params;
+    const { emoji } = req.body;
+    if (!emoji) return res.status(400).json({ error: 'Emoji is required' });
+    const result = await MessageService.toggleReaction(messageId, req.userId, emoji);
+    res.json(result);
   } catch (error: any) {
     next(error);
   }

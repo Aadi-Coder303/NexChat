@@ -5,21 +5,12 @@ import { MessageService } from '../services/message.service';
 import { PresenceService } from '../services/presence.service';
 
 export const setupSocketHandlers = (io: Server) => {
-  // Authentication middleware for Socket.io
+  // Auth middleware
   io.use((socket, next) => {
     const token = socket.handshake.auth.token;
-    
-    if (!token) {
-      return next(new Error('Authentication error: Token missing'));
-    }
-
+    if (!token) return next(new Error('Authentication error: Token missing'));
     const payload = verifyAccessToken(token);
-    
-    if (!payload) {
-      return next(new Error('Authentication error: Invalid token'));
-    }
-
-    // Attach user ID to the socket
+    if (!payload) return next(new Error('Authentication error: Invalid token'));
     (socket as any).userId = payload.userId;
     next();
   });
@@ -28,12 +19,10 @@ export const setupSocketHandlers = (io: Server) => {
     const userId = (socket as any).userId;
     console.log(`👤 User connected: ${userId}`);
 
-    // Set online and broadcast
     PresenceService.setOnline(userId).then(() => {
       io.emit('presence:update', { userId, status: 'online' });
     });
 
-    // Join user's personal room for direct notifications
     socket.join(`user:${userId}`);
 
     socket.on('heartbeat', async () => {
@@ -41,43 +30,62 @@ export const setupSocketHandlers = (io: Server) => {
     });
 
     socket.on('channel:join', async ({ channelId }) => {
-      // Verify membership
       const membership = await prisma.channelMember.findUnique({
-        where: {
-          channelId_userId: {
-            channelId,
-            userId,
-          },
-        },
+        where: { channelId_userId: { channelId, userId } },
       });
-
-      if (!membership) {
-        return socket.emit('error', { message: 'You are not a member of this channel' });
-      }
-
+      if (!membership) return socket.emit('error', { message: 'Not a member of this channel' });
       socket.join(`channel:${channelId}`);
       console.log(`📣 User ${userId} joined channel: ${channelId}`);
     });
 
     socket.on('channel:leave', ({ channelId }) => {
       socket.leave(`channel:${channelId}`);
-      console.log(`📣 User ${userId} left channel: ${channelId}`);
     });
 
-    socket.on('message:send', async ({ channelId, content, clientTempId, isEncrypted, encryptionData }) => {
+    // Send a new message
+    socket.on('message:send', async ({ channelId, content, clientTempId, isEncrypted, encryptionData, replyToId }) => {
       try {
-        const message = await MessageService.sendMessage(channelId, userId, content, isEncrypted, encryptionData);
-
-        // Broadcast to everyone EXCEPT the sender (they already have the optimistic message)
+        const message = await MessageService.sendMessage(channelId, userId, content, isEncrypted, encryptionData, replyToId);
+        // Send to others in the channel
         socket.to(`channel:${channelId}`).emit('message:new', message);
-
-        // Send ACK back to sender with the real server ID
-        socket.emit('message:ack', { clientTempId, serverId: message.id });
+        // ACK back to sender with the real server ID
+        socket.emit('message:ack', { clientTempId, serverId: message.id, message });
       } catch (error: any) {
         socket.emit('error', { message: error.message });
       }
     });
 
+    // Delete a message
+    socket.on('message:delete', async ({ messageId, channelId }) => {
+      try {
+        const message = await MessageService.deleteMessage(messageId, userId);
+        io.to(`channel:${channelId}`).emit('message:deleted', { messageId, channelId, message });
+      } catch (error: any) {
+        socket.emit('error', { message: error.message });
+      }
+    });
+
+    // Edit a message
+    socket.on('message:edit', async ({ messageId, channelId, content }) => {
+      try {
+        const message = await MessageService.editMessage(messageId, userId, content);
+        io.to(`channel:${channelId}`).emit('message:edited', { messageId, channelId, message });
+      } catch (error: any) {
+        socket.emit('error', { message: error.message });
+      }
+    });
+
+    // Toggle a reaction
+    socket.on('message:react', async ({ messageId, channelId, emoji }) => {
+      try {
+        const result = await MessageService.toggleReaction(messageId, userId, emoji);
+        io.to(`channel:${channelId}`).emit('message:reaction', { ...result, channelId });
+      } catch (error: any) {
+        socket.emit('error', { message: error.message });
+      }
+    });
+
+    // Typing indicators
     socket.on('typing:start', ({ channelId }) => {
       socket.to(`channel:${channelId}`).emit('typing:update', { channelId, userId, isTyping: true });
     });

@@ -1,4 +1,4 @@
-import { LogOut, Hash, Ghost, Radio, X, UserPlus, Copy, Check, Link2 } from 'lucide-react';
+import { LogOut, Hash, Ghost, Radio, X, UserPlus, Copy, Check, Link2, DoorOpen } from 'lucide-react';
 import { useState } from 'react';
 import { useAuthStore } from '../stores/authStore';
 import { useChatStore } from '../stores/chatStore';
@@ -15,10 +15,15 @@ interface SidebarProps {
 
 export default function Sidebar({ activeChannelId, onChannelSelect, onClose }: SidebarProps) {
   const { user, logout } = useAuthStore();
-  const { channels } = useChatStore();
+  const { channels, unreadCounts, leaveChannel } = useChatStore();
   const [copied, setCopied] = useState(false);
   const [addFriendOpen, setAddFriendOpen] = useState(false);
   const [inviteModal, setInviteModal] = useState<{ channelId: string; channelName: string } | null>(null);
+
+  const handleLeave = async (channelId: string) => {
+    if (!confirm('Leave this channel?')) return;
+    await leaveChannel(channelId);
+  };
 
   const copyCode = () => {
     if (user?.friendCode) {
@@ -71,36 +76,50 @@ export default function Sidebar({ activeChannelId, onChannelSelect, onClose }: S
               </button>
             </div>
             <div className="space-y-1">
-              {groupChannels.map(channel => (
-                <div key={channel.id} className="relative group/ch">
-                  <button
-                    onClick={() => { onChannelSelect(channel.id); onClose?.(); }}
-                    className={cn(
-                      "w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm transition-all group relative overflow-hidden pr-10",
-                      activeChannelId === channel.id
-                        ? "text-primary font-bold bg-primary/5"
-                        : "text-white/40 hover:bg-white/5 hover:text-white"
-                    )}
-                  >
-                    {activeChannelId === channel.id && (
-                      <motion.div
-                        layoutId="active-pill"
-                        className="absolute left-0 w-1 h-6 bg-primary rounded-full"
-                      />
-                    )}
-                    <Hash className={cn("h-4 w-4 transition-transform group-hover:rotate-12", activeChannelId === channel.id ? "text-primary" : "text-white/10")} />
-                    <span className="italic tracking-tight truncate">{channel.name}</span>
-                  </button>
-                  {/* Invite button — shows on hover */}
-                  <button
-                    onClick={(e) => { e.stopPropagation(); setInviteModal({ channelId: channel.id, channelName: channel.name || '' }); }}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-white/0 group-hover/ch:text-white/30 hover:!text-accent hover:bg-accent/10 transition-all"
-                    title="Get invite code"
-                  >
-                    <Link2 size={13} />
-                  </button>
-                </div>
-              ))}
+              {groupChannels.map(channel => {
+                const unread = unreadCounts[channel.id] || 0;
+                return (
+                  <div key={channel.id} className="relative group/ch">
+                    <button
+                      onClick={() => { onChannelSelect(channel.id); onClose?.(); }}
+                      className={cn(
+                        "w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm transition-all group relative overflow-hidden pr-16",
+                        activeChannelId === channel.id
+                          ? "text-primary font-bold bg-primary/5"
+                          : "text-white/40 hover:bg-white/5 hover:text-white"
+                      )}
+                    >
+                      {activeChannelId === channel.id && (
+                        <motion.div layoutId="active-pill" className="absolute left-0 w-1 h-6 bg-primary rounded-full" />
+                      )}
+                      <Hash className={cn("h-4 w-4 flex-shrink-0 transition-transform group-hover:rotate-12", activeChannelId === channel.id ? "text-primary" : "text-white/10")} />
+                      <span className="italic tracking-tight truncate flex-1 text-left">{channel.name}</span>
+                      {unread > 0 && activeChannelId !== channel.id && (
+                        <span className="absolute right-10 top-1/2 -translate-y-1/2 min-w-[18px] h-[18px] bg-primary rounded-full text-[10px] font-bold text-black flex items-center justify-center px-1">
+                          {unread > 99 ? '99+' : unread}
+                        </span>
+                      )}
+                    </button>
+                    {/* Action buttons on hover */}
+                    <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-0.5 opacity-0 group-hover/ch:opacity-100 transition-opacity">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setInviteModal({ channelId: channel.id, channelName: channel.name || '' }); }}
+                        className="p-1.5 rounded-lg text-white/30 hover:text-accent hover:bg-accent/10 transition-all"
+                        title="Get invite code"
+                      >
+                        <Link2 size={12} />
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleLeave(channel.id); }}
+                        className="p-1.5 rounded-lg text-white/30 hover:text-red-400 hover:bg-red-400/10 transition-all"
+                        title="Leave channel"
+                      >
+                        <DoorOpen size={12} />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
               {groupChannels.length === 0 && (
                 <div className="px-4 text-xs text-white/30 italic">No frequencies found.</div>
               )}

@@ -8,6 +8,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
 import { Button } from '../../components/Button';
 import { Input } from '../../components/Input';
+import { Tooltip } from '../../components/Tooltip';
 
 const recoverSchema = z.object({
   username: z.string().min(3, 'Username must be at least 3 characters'),
@@ -70,7 +71,9 @@ export default function RecoverPage() {
             >
               <KeyRound className="text-white" size={32} />
             </motion.div>
-            <h1 className="text-4xl font-display text-white mb-2 italic tracking-tight">Recover Identity</h1>
+            <Tooltip content="Password Recovery">
+              <h1 className="text-4xl font-display text-white mb-2 italic tracking-tight">Recover Identity</h1>
+            </Tooltip>
             <p className="text-accent font-bold text-xs uppercase tracking-[0.2em]">Unlock the void</p>
           </div>
 
@@ -99,7 +102,9 @@ export default function RecoverPage() {
           ) : (
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
               <div className="space-y-2">
-                <label className="text-[10px] font-bold uppercase tracking-widest text-white/40 ml-4">Entity Handle</label>
+                <Tooltip content="Enter your Username">
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-white/40 ml-4 cursor-help">Entity Handle</label>
+                </Tooltip>
                 <Input
                   {...register('username')}
                   type="text"
@@ -110,7 +115,9 @@ export default function RecoverPage() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-[10px] font-bold uppercase tracking-widest text-white/40 ml-4">Secret Recovery Key</label>
+                <Tooltip content="Enter your Secret Key">
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-white/40 ml-4 cursor-help">Secret Recovery Key</label>
+                </Tooltip>
                 <Input
                   {...register('recoveryKey')}
                   type="text"
@@ -121,7 +128,9 @@ export default function RecoverPage() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-[10px] font-bold uppercase tracking-widest text-white/40 ml-4">New Secure Seal</label>
+                <Tooltip content="Enter a New Password">
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-white/40 ml-4 cursor-help">New Secure Seal</label>
+                </Tooltip>
                 <Input
                   {...register('newPassword')}
                   type="password"

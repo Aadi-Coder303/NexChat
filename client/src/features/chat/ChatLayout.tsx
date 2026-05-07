@@ -5,6 +5,7 @@ import { Button } from '../../components/Button';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useChatStore } from '../../stores/chatStore';
 import { socketService } from '../../lib/socket';
+import { Tooltip } from '../../components/Tooltip';
 
 export default function ChatLayout() {
   const { channels, activeChannelId, setActiveChannel, messages, fetchChannels, onlineUsers } = useChatStore();
@@ -98,7 +99,9 @@ export default function ChatLayout() {
           <div className="flex items-center gap-6 text-white/30">
             <div className="flex items-center bg-white/5 rounded-full px-4 py-1.5 border border-white/10">
               <Search className="h-4 w-4 mr-2" />
-              <input type="text" placeholder="Recall..." className="bg-transparent border-none text-[11px] focus:ring-0 w-32 focus:w-48 transition-all" />
+              <Tooltip content="Search Messages">
+                <input type="text" placeholder="Recall..." className="bg-transparent border-none text-[11px] focus:ring-0 w-32 focus:w-48 transition-all" />
+              </Tooltip>
             </div>
             <div className="h-8 w-px bg-white/10" />
             <button className="hover:text-primary transition-colors"><Bell className="h-5 w-5" /></button>
@@ -159,14 +162,16 @@ export default function ChatLayout() {
                 <Plus className="h-6 w-6 text-white/20" />
               </Button>
               
-              <textarea
-                value={messageText}
-                onChange={(e) => setMessageText(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder="Broadcast your thoughts..."
-                className="flex-1 bg-transparent border-none focus:ring-0 text-sm text-white placeholder:text-white/20 py-3.5 resize-none min-h-[52px] max-h-[150px] overflow-y-auto font-medium"
-                rows={1}
-              />
+              <Tooltip content="Type a Message">
+                <textarea
+                  value={messageText}
+                  onChange={(e) => setMessageText(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder="Broadcast your thoughts..."
+                  className="flex-1 bg-transparent border-none focus:ring-0 text-sm text-white placeholder:text-white/20 py-3.5 resize-none min-h-[52px] max-h-[150px] overflow-y-auto font-medium"
+                  rows={1}
+                />
+              </Tooltip>
 
               <Button 
                 onClick={handleSendMessage}

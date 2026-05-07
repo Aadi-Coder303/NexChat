@@ -8,6 +8,7 @@ import { Link } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
 import { Button } from '../../components/Button';
 import { Input } from '../../components/Input';
+import { Tooltip } from '../../components/Tooltip';
 
 const loginSchema = z.object({
   username: z.string().min(3, 'Username must be at least 3 characters'),
@@ -70,7 +71,9 @@ export default function LoginPage() {
             >
               <LogIn className="text-white" size={32} />
             </motion.div>
-            <h1 className="text-4xl font-display text-white mb-2 italic">Welcome Back</h1>
+            <Tooltip content="Sign In">
+              <h1 className="text-4xl font-display text-white mb-2 italic">Welcome Back</h1>
+            </Tooltip>
             <p className="text-primary font-bold text-xs uppercase tracking-[0.2em]">Enter the dreamscape</p>
           </div>
 
@@ -87,7 +90,9 @@ export default function LoginPage() {
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             <div className="space-y-2">
-              <label className="text-[10px] font-bold uppercase tracking-widest text-white/40 ml-4">Entity Handle</label>
+              <Tooltip content="Enter your Username">
+                <label className="text-[10px] font-bold uppercase tracking-widest text-white/40 ml-4 cursor-help">Entity Handle</label>
+              </Tooltip>
               <Input
                 {...register('username')}
                 type="text"
@@ -98,7 +103,9 @@ export default function LoginPage() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-[10px] font-bold uppercase tracking-widest text-white/40 ml-4">Access Secret</label>
+              <Tooltip content="Enter your Password">
+                <label className="text-[10px] font-bold uppercase tracking-widest text-white/40 ml-4 cursor-help">Access Secret</label>
+              </Tooltip>
               <Input
                 {...register('password')}
                 type="password"
@@ -127,13 +134,17 @@ export default function LoginPage() {
           <div className="flex justify-between items-center mt-8">
             <p className="text-sm text-white/40">
               Lost your way?{' '}
-              <Link to="/register" className="text-accent font-bold hover:underline italic">
-                Create a new identity
-              </Link>
+              <Tooltip content="Sign Up">
+                <Link to="/register" className="text-accent font-bold hover:underline italic cursor-help">
+                  Create a new identity
+                </Link>
+              </Tooltip>
             </p>
-            <Link to="/recover" className="text-sm text-primary/60 hover:text-primary transition-colors italic">
-              Forgot Secret?
-            </Link>
+            <Tooltip content="Password Recovery">
+              <Link to="/recover" className="text-sm text-primary/60 hover:text-primary transition-colors italic cursor-help">
+                Forgot Secret?
+              </Link>
+            </Tooltip>
           </div>
         </div>
       </motion.div>

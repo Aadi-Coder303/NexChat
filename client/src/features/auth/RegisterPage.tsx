@@ -8,6 +8,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
 import { Button } from '../../components/Button';
 import { Input } from '../../components/Input';
+import { Tooltip } from '../../components/Tooltip';
 
 const registerSchema = z.object({
   username: z.string().min(3, 'Username must be at least 3 characters'),
@@ -68,7 +69,9 @@ export default function RegisterPage() {
             >
               <UserPlus className="text-black" size={32} />
             </motion.div>
-            <h1 className="text-4xl font-display text-white mb-2 italic tracking-tight">Birth an Identity</h1>
+            <Tooltip content="Sign Up">
+              <h1 className="text-4xl font-display text-white mb-2 italic tracking-tight">Birth an Identity</h1>
+            </Tooltip>
             <p className="text-accent font-bold text-xs uppercase tracking-[0.2em]">Join the collective consciousness</p>
           </div>
 
@@ -110,7 +113,9 @@ export default function RegisterPage() {
           ) : (
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
               <div className="space-y-2">
-                <label className="text-[10px] font-bold uppercase tracking-widest text-white/40 ml-4">Entity Handle</label>
+                <Tooltip content="Choose a Username">
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-white/40 ml-4 cursor-help">Entity Handle</label>
+                </Tooltip>
                 <Input
                   {...register('username')}
                   type="text"
@@ -121,7 +126,9 @@ export default function RegisterPage() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-[10px] font-bold uppercase tracking-widest text-white/40 ml-4">Secure Seal</label>
+                <Tooltip content="Choose a Password">
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-white/40 ml-4 cursor-help">Secure Seal</label>
+                </Tooltip>
                 <Input
                   {...register('password')}
                   type="password"
@@ -131,29 +138,33 @@ export default function RegisterPage() {
                 />
               </div>
 
-              <Button
-                type="submit"
-                variant="accent"
-                disabled={isSubmitting}
-                className="w-full h-14 rounded-2xl text-lg group overflow-hidden relative"
-              >
-                <motion.span 
-                  className="relative z-10 flex items-center gap-2"
-                  whileHover={{ scale: 1.05 }}
+              <Tooltip content="Create Account">
+                <Button
+                  type="submit"
+                  variant="accent"
+                  disabled={isSubmitting}
+                  className="w-full h-14 rounded-2xl text-lg group overflow-hidden relative"
                 >
-                  {isSubmitting ? 'Manifesting...' : 'Manifest Identity'}
-                  <Sparkles size={18} />
-                </motion.span>
-              </Button>
+                  <motion.span 
+                    className="relative z-10 flex items-center gap-2"
+                    whileHover={{ scale: 1.05 }}
+                  >
+                    {isSubmitting ? 'Manifesting...' : 'Manifest Identity'}
+                    <Sparkles size={18} />
+                  </motion.span>
+                </Button>
+              </Tooltip>
             </form>
           )}
 
           {!recoveryKey && (
             <p className="text-center mt-8 text-sm text-white/40">
               Already manifested?{' '}
-              <Link to="/login" className="text-primary font-bold hover:underline italic">
-                Recall identity
-              </Link>
+              <Tooltip content="Log In">
+                <Link to="/login" className="text-primary font-bold hover:underline italic cursor-help">
+                  Recall identity
+                </Link>
+              </Tooltip>
             </p>
           )}
         </div>

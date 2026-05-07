@@ -14,6 +14,22 @@ router.get('/', async (req: any, res, next) => {
   }
 });
 
+// Create a new channel
+router.post('/', async (req: any, res, next) => {
+  try {
+    const { name, type, memberIds } = req.body;
+    const channel = await ChannelService.createChannel(
+      name,
+      type,
+      req.userId,
+      memberIds || [req.userId]
+    );
+    res.status(201).json(channel);
+  } catch (error: any) {
+    next(error);
+  }
+});
+
 // Get messages for a channel (paginated)
 router.get('/:id/messages', async (req: any, res, next) => {
   try {

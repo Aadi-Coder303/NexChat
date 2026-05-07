@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { motion } from 'framer-motion';
-import { UserPlus, Sparkles, Wand2, ArrowLeft } from 'lucide-react';
+import { UserPlus, Sparkles, Wand2, ArrowLeft, Copy, Check } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
 import { Button } from '../../components/Button';
@@ -22,6 +22,15 @@ export default function RegisterPage() {
   const navigate = useNavigate();
   const [error, setError] = useState<string | null>(null);
   const [recoveryKey, setRecoveryKey] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    if (recoveryKey) {
+      navigator.clipboard.writeText(recoveryKey);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
 
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<RegisterForm>({
     resolver: zodResolver(registerSchema),
@@ -94,7 +103,16 @@ export default function RegisterPage() {
             >
               <div className="bg-primary/10 border border-primary p-6 rounded-2xl relative group">
                 <p className="text-[10px] font-bold uppercase tracking-widest text-primary mb-2">Your Secret Recovery Key</p>
-                <p className="font-mono text-xl text-white break-all">{recoveryKey}</p>
+                <p className="font-mono text-xl text-white break-all mb-4">{recoveryKey}</p>
+                <Button 
+                  onClick={handleCopy}
+                  variant="surreal"
+                  size="sm"
+                  className="w-full flex items-center gap-2"
+                >
+                  {copied ? <Check size={16} className="text-accent" /> : <Copy size={16} />}
+                  {copied ? 'Captured in Memory' : 'Inscribe in Clipboard'}
+                </Button>
               </div>
               <div className="bg-danger/20 border border-danger/50 p-4 rounded-xl flex items-start gap-3 text-left">
                 <Wand2 className="text-danger flex-shrink-0 mt-0.5" size={16} />

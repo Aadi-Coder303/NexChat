@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 import api from '../lib/api';
 
 interface User {
@@ -16,30 +17,37 @@ interface AuthState {
   logout: () => Promise<void>;
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
-  user: null,
-  accessToken: null,
-  setAuth: (user, accessToken) => set({ user, accessToken }),
-  
-  login: async (username, password) => {
-    const response = await api.post('/auth/login', { username, password });
-    const { user, accessToken } = response.data;
-    set({ user, accessToken });
-  },
+export const useAuthStore = create<AuthState>()(
+  persist(
+    (set) => ({
+      user: null,
+      accessToken: null,
+      setAuth: (user, accessToken) => set({ user, accessToken }),
+      
+      login: async (username, password) => {
+        const response = await api.post('/auth/login', { username, password });
+        const { user, accessToken } = response.data;
+        set({ user, accessToken });
+      },
 
-  register: async (username, password) => {
-    const response = await api.post('/auth/register', { username, password });
-    const { user, accessToken, recoveryKey } = response.data;
-    set({ user, accessToken });
-    return { recoveryKey };
-  },
+      register: async (username, password) => {
+        const response = await api.post('/auth/register', { username, password });
+        const { user, accessToken, recoveryKey } = response.data;
+        set({ user, accessToken });
+        return { recoveryKey };
+      },
 
-  recoverAccount: async (username, recoveryKey, newPassword) => {
-    await api.post('/auth/recover', { username, recoveryKey, newPassword });
-  },
+      recoverAccount: async (username, recoveryKey, newPassword) => {
+        await api.post('/auth/recover', { username, recoveryKey, newPassword });
+      },
 
-  logout: async () => {
-    await api.post('/auth/logout');
-    set({ user: null, accessToken: null });
-  },
-}));
+      logout: async () => {
+        await api.post('/auth/logout');
+        set({ user: null, accessToken: null });
+      },
+    }),
+    {
+      name: 'nexchat-auth',
+    }
+  )
+);

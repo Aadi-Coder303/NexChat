@@ -49,13 +49,27 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+      scriptSrc: ["'self'"],                          // no unsafe-inline, no unsafe-eval
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
-      imgSrc: ["'self'", "data:", "https://*"],
+      imgSrc: ["'self'", "data:", "blob:", "https://*"],
       connectSrc: ["'self'", "https://*", "wss://*", "ws://*"],
+      frameSrc: ["'none'"],
+      objectSrc: ["'none'"],
+      baseUri: ["'self'"],
+      formAction: ["'self'"],
+      upgradeInsecureRequests: [],
     },
   },
+  hsts: {
+    maxAge: 31536000,       // 1 year
+    includeSubDomains: true,
+    preload: true,
+  },
+  referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+  noSniff: true,            // X-Content-Type-Options: nosniff
+  xssFilter: true,
+  frameguard: { action: 'deny' },
 }));
 app.use(cors({
   origin: true, // Reflect request origin

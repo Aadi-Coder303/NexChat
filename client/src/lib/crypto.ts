@@ -8,8 +8,16 @@
  */
 
 export class CryptoEngine {
-  // Generate a new RSA key pair for a user
+  /**
+   * Generate a new RSA-OAEP key pair.
+   * 
+   * Security: The public key is exported as SPKI base64 for the server.
+   * The private key is re-imported with extractable: FALSE — meaning the
+   * Web Crypto sandbox will refuse any exportKey() call on it, even under XSS.
+   * The transient PKCS8 bytes exist only for the duration of this function call.
+   */
   static async generateKeyPair(): Promise<{ publicKey: string; privateKey: CryptoKey }> {
+    // Step 1: Generate with extractable:true so we can export both keys immediately
     const keyPair = await window.crypto.subtle.generateKey(
       {
         name: "RSA-OAEP",
@@ -17,16 +25,31 @@ export class CryptoEngine {
         publicExponent: new Uint8Array([1, 0, 1]),
         hash: "SHA-256",
       },
-      true, // extractable
+      true, // must be true here to export the keys in the next steps
       ["encrypt", "decrypt"]
     );
 
+    // Step 2: Export public key (SPKI) — fine to expose, it's public
     const exportedPublic = await window.crypto.subtle.exportKey("spki", keyPair.publicKey);
     const publicKeyBase64 = btoa(String.fromCharCode(...new Uint8Array(exportedPublic)));
 
+    // Step 3: Export private key as PKCS8 bytes (transient — never stored as bytes)
+    const exportedPrivate = await window.crypto.subtle.exportKey("pkcs8", keyPair.privateKey);
+
+    // Step 4: Re-import private key with extractable:FALSE
+    // This locks it inside the browser's cryptographic sandbox.
+    // Any call to exportKey() on this key will throw a DOMException.
+    const nonExtractablePrivateKey = await window.crypto.subtle.importKey(
+      "pkcs8",
+      exportedPrivate,
+      { name: "RSA-OAEP", hash: "SHA-256" },
+      false, // ← extractable: FALSE — the critical security fix
+      ["decrypt"]
+    );
+
     return {
       publicKey: publicKeyBase64,
-      privateKey: keyPair.privateKey,
+      privateKey: nonExtractablePrivateKey,
     };
   }
 

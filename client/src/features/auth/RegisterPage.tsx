@@ -80,12 +80,12 @@ export default function RegisterPage() {
       </div>
 
       <motion.div
-        initial={{ opacity: 0, scale: 0.8, rotate: 5 }}
+        initial={{ opacity: 0, scale: 0.8, rotate: 2 }}
         animate={{ opacity: 1, scale: 1, rotate: 0 }}
-        transition={{ type: 'spring', damping: 15 }}
+        transition={{ type: 'spring', damping: 20 }}
         className="w-full max-w-md z-10"
       >
-        <div className="glass-retro p-8 rounded-[2rem] border-2 border-white/10 relative">
+        <div className="glass-panel p-8 rounded-[2rem] relative">
           <Link to="/login" className="absolute top-8 left-8 text-white/40 hover:text-white transition-colors">
             <ArrowLeft size={20} />
           </Link>
@@ -94,12 +94,12 @@ export default function RegisterPage() {
             <motion.div
               initial={{ y: -20 }}
               animate={{ y: 0 }}
-              className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-accent shadow-[4px_4px_0px_0px_#000] border-2 border-black mb-6"
+              className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-accent/20 border border-accent/50 shadow-[0_0_30px_rgba(16,185,129,0.3)] mb-6"
             >
-              <UserPlus className="text-black" size={32} />
+              <UserPlus className="text-accent" size={32} />
             </motion.div>
             <Tooltip content="Sign Up">
-              <h1 className="text-4xl font-display text-white mb-2 italic tracking-tight">Birth an Identity</h1>
+              <h1 className="text-4xl font-display text-white mb-2 tracking-tight text-glow">Birth an Identity</h1>
             </Tooltip>
             <p className="text-accent font-bold text-xs uppercase tracking-[0.2em]">Join the collective consciousness</p>
           </div>
@@ -159,64 +159,60 @@ export default function RegisterPage() {
                   type="text"
                   placeholder="aadi_observer"
                   error={errors.username?.message}
-                  className="bg-black/40 border-white/10 h-14 rounded-xl focus:border-accent/50 text-white placeholder:text-white/20"
+                  className=""
                 />
               </div>
 
               <div className="space-y-2">
                 <Tooltip content="Choose a Password">
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-white/40 ml-4 cursor-help">Secure Seal</label>
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-white/40 ml-4 cursor-help">Access Secret</label>
                 </Tooltip>
                 <Input
                   {...register('password')}
                   type="password"
                   placeholder="••••••••"
                   error={errors.password?.message}
-                  className="bg-black/40 border-white/10 h-14 rounded-xl focus:border-accent/50 text-white placeholder:text-white/20"
+                  className=""
                 />
               </div>
 
               <div className="space-y-2">
                 <Tooltip content="Re-enter your Password">
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-white/40 ml-4 cursor-help">Confirm Seal</label>
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-white/40 ml-4 cursor-help">Confirm Secret</label>
                 </Tooltip>
                 <Input
                   {...register('confirmPassword')}
                   type="password"
                   placeholder="••••••••"
                   error={errors.confirmPassword?.message}
-                  className="bg-black/40 border-white/10 h-14 rounded-xl focus:border-accent/50 text-white placeholder:text-white/20"
+                  className=""
                 />
               </div>
 
               <Tooltip content="Create Account">
                 <Button
                   type="submit"
-                  variant="accent"
                   disabled={isSubmitting}
-                  className="w-full h-14 rounded-2xl text-lg group overflow-hidden relative"
+                  className="w-full h-12 rounded-xl bg-white text-black hover:bg-white/90 transition-all font-bold flex items-center justify-center gap-2"
                 >
-                  <motion.span 
-                    className="relative z-10 flex items-center gap-2"
-                    whileHover={{ scale: 1.05 }}
-                  >
-                    {isSubmitting ? 'Manifesting...' : 'Manifest Identity'}
-                    <Sparkles size={18} />
-                  </motion.span>
+                  {isSubmitting ? 'Manifesting...' : 'Manifest Identity'}
+                  {!isSubmitting && <Sparkles size={16} />}
                 </Button>
               </Tooltip>
             </form>
           )}
 
           {!recoveryKey && (
-            <p className="text-center mt-8 text-sm text-white/40">
-              Already manifested?{' '}
-              <Tooltip content="Log In">
-                <Link to="/login" className="text-primary font-bold hover:underline italic cursor-help">
-                  Recall identity
-                </Link>
-              </Tooltip>
-            </p>
+            <div className="flex justify-between items-center mt-8">
+              <p className="text-sm text-white/40">
+                Already exist?{' '}
+                <Tooltip content="Sign In">
+                  <Link to="/login" className="text-indigo-400 font-bold hover:text-indigo-300 hover:underline cursor-help transition-colors">
+                    Return to your body
+                  </Link>
+                </Tooltip>
+              </p>
+            </div>
           )}
         </div>
       </motion.div>

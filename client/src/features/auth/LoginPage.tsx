@@ -64,12 +64,12 @@ export default function LoginPage() {
       </div>
 
       <motion.div
-        initial={{ opacity: 0, scale: 0.8, rotate: -5 }}
+        initial={{ opacity: 0, scale: 0.8, rotate: -2 }}
         animate={{ opacity: 1, scale: 1, rotate: 0 }}
-        transition={{ type: 'spring', damping: 15 }}
+        transition={{ type: 'spring', damping: 20 }}
         className="w-full max-w-md z-10"
       >
-        <div className="glass-retro p-8 rounded-[2rem] border-2 border-white/10 relative">
+        <div className="glass-panel p-8 rounded-[2rem] relative">
           {/* Floating Surreal Elements */}
           <motion.div 
             animate={{ y: [0, -10, 0], rotate: [0, 5, 0] }}
@@ -83,12 +83,12 @@ export default function LoginPage() {
             <motion.div
               initial={{ y: -20 }}
               animate={{ y: 0 }}
-              className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary shadow-[4px_4px_0px_0px_#000] border-2 border-black mb-6"
+              className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary/20 border border-primary/50 shadow-[0_0_30px_rgba(139,92,246,0.3)] mb-6"
             >
-              <LogIn className="text-white" size={32} />
+              <LogIn className="text-primary" size={32} />
             </motion.div>
             <Tooltip content="Sign In">
-              <h1 className="text-4xl font-display text-white mb-2 italic">Welcome Back</h1>
+              <h1 className="text-4xl font-display text-white mb-2 tracking-tight text-glow">Welcome Back</h1>
             </Tooltip>
             <p className="text-primary font-bold text-xs uppercase tracking-[0.2em]">Enter the dreamscape</p>
           </div>
@@ -114,7 +114,7 @@ export default function LoginPage() {
                 type="text"
                 placeholder="aadi_observer"
                 error={errors.username?.message}
-                className="bg-black/40 border-white/10 h-14 rounded-xl focus:border-primary/50 text-white placeholder:text-white/20"
+                className=""
               />
             </div>
 
@@ -127,7 +127,7 @@ export default function LoginPage() {
                 type="password"
                 placeholder="••••••••"
                 error={errors.password?.message}
-                className="bg-black/40 border-white/10 h-14 rounded-xl focus:border-primary/50 text-white placeholder:text-white/20"
+                className=""
               />
             </div>
 
@@ -151,7 +151,7 @@ export default function LoginPage() {
             <p className="text-sm text-white/40">
               Lost your way?{' '}
               <Tooltip content="Sign Up">
-                <Link to="/register" className="text-accent font-bold hover:underline italic cursor-help">
+                <Link to="/register" className="text-accent font-bold hover:text-emerald-400 hover:underline cursor-help transition-colors">
                   Create a new identity
                 </Link>
               </Tooltip>

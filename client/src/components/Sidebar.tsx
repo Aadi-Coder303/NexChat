@@ -38,7 +38,7 @@ export default function Sidebar({ activeChannelId, onChannelSelect, onClose }: S
 
   return (
     <>
-      <div className="w-[280px] sm:w-80 bg-[#080808] flex flex-col border-r-2 border-white/5 h-full relative overflow-hidden">
+      <div className="w-[280px] sm:w-80 glass-panel border-r border-white/5 h-full relative overflow-hidden flex flex-col z-40">
         {/* Texture Overlay */}
         <div className="absolute inset-0 bg-retro-grain opacity-[0.02] pointer-events-none" />
 
@@ -83,10 +83,10 @@ export default function Sidebar({ activeChannelId, onChannelSelect, onClose }: S
                     <button
                       onClick={() => { onChannelSelect(channel.id); onClose?.(); }}
                       className={cn(
-                        "w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm transition-all group relative overflow-hidden pr-16",
+                        "w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm transition-all duration-300 group relative overflow-hidden pr-16",
                         activeChannelId === channel.id
-                          ? "text-primary font-bold bg-primary/5"
-                          : "text-white/40 hover:bg-white/5 hover:text-white"
+                          ? "text-primary font-bold bg-primary/10 shadow-[inset_0_0_20px_rgba(139,92,246,0.1)]"
+                          : "text-white/40 hover:bg-white/[0.05] hover:text-white"
                       )}
                     >
                       {activeChannelId === channel.id && (
@@ -150,14 +150,17 @@ export default function Sidebar({ activeChannelId, onChannelSelect, onClose }: S
                     key={dm.id}
                     onClick={() => { onChannelSelect(dm.id); onClose?.(); }}
                     className={cn(
-                      "w-full flex items-center gap-4 px-4 py-3 rounded-2xl text-sm transition-all group relative",
+                      "w-full flex items-center gap-4 px-4 py-3 rounded-2xl text-sm transition-all duration-300 group relative",
                       activeChannelId === dm.id
-                        ? "text-accent font-bold bg-accent/5"
-                        : "text-white/40 hover:bg-white/5 hover:text-white"
+                        ? "text-accent font-bold bg-accent/10 shadow-[inset_0_0_20px_rgba(16,185,129,0.1)]"
+                        : "text-white/40 hover:bg-white/[0.05] hover:text-white"
                     )}
                   >
                     <div className="relative">
-                      <div className="h-10 w-10 rounded-[1rem] bg-white/5 border border-white/5 flex items-center justify-center text-lg filter grayscale group-hover:grayscale-0 transition-all text-white">
+                      <div className={cn(
+                        "h-10 w-10 rounded-[1rem] flex items-center justify-center text-lg filter grayscale group-hover:grayscale-0 transition-all text-white",
+                        activeChannelId === dm.id ? "bg-accent/20 border-accent/30 shadow-[0_0_15px_rgba(16,185,129,0.3)] grayscale-0" : "bg-white/5 border border-white/5"
+                      )}>
                         {displayName.charAt(0).toUpperCase()}
                       </div>
                     </div>

@@ -284,7 +284,7 @@ export default function ChatLayout() {
         </div>
 
         {/* Header */}
-        <header className="h-20 flex items-center justify-between px-4 lg:px-8 border-b-2 border-white/5 bg-black/40 backdrop-blur-2xl z-30 flex-shrink-0">
+        <header className="h-20 flex items-center justify-between px-4 lg:px-8 border-b border-white/5 glass-panel z-30 flex-shrink-0">
           <div className="flex items-center gap-2 lg:gap-4">
             <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden p-2 text-white/40 hover:text-white"><Menu size={24} /></button>
             <div className="h-8 w-8 lg:h-10 lg:w-10 bg-accent/20 rounded-full flex items-center justify-center border border-accent/30">
@@ -393,8 +393,9 @@ export default function ChatLayout() {
                     {/* Message bubble */}
                     <div className="relative">
                       <div className={cn(
-                        "glass-retro px-5 py-3 rounded-2xl rounded-tl-none border-white/5 group-hover:border-white/10 transition-colors",
-                        msg.deletedAt && "opacity-40 italic"
+                        "glass-panel px-5 py-3 rounded-2xl rounded-tl-none border-white/5 group-hover:border-white/10 transition-colors shadow-lg",
+                        msg.deletedAt && "opacity-40 italic",
+                        isOwnMessage && "bg-primary/5 border-primary/20"
                       )}>
                         <p className="text-sm text-white/80 leading-relaxed font-medium whitespace-pre-wrap break-words">
                           {msg.deletedAt
@@ -542,7 +543,7 @@ export default function ChatLayout() {
             )}
           </AnimatePresence>
 
-          <motion.div className="max-w-4xl mx-auto glass-retro rounded-[2.5rem] p-2 lg:p-3 border-2 border-white/5 shadow-2xl relative">
+          <motion.div className="max-w-4xl mx-auto glass-panel rounded-3xl p-2 lg:p-3 relative">
             <div className="absolute -top-1 -right-1 text-accent/20 animate-pulse"><Sparkles size={32} /></div>
             <div className="flex items-end gap-2">
               <textarea
@@ -557,8 +558,8 @@ export default function ChatLayout() {
               <Button
                 onClick={handleSendMessage}
                 size="icon"
-                variant={editingMessage ? "surreal" : "accent"}
-                className="rounded-full h-12 w-12 flex-shrink-0 shadow-[0_0_20px_rgba(16,185,129,0.3)] border-none"
+                variant={editingMessage ? "default" : "accent"}
+                className="rounded-xl h-12 w-12 flex-shrink-0 border-none shadow-[0_0_15px_rgba(16,185,129,0.2)] hover:shadow-[0_0_25px_rgba(16,185,129,0.4)]"
                 disabled={!(editingMessage ? editText.trim() : messageText.trim())}
               >
                 {editingMessage ? <Check className="h-5 w-5" /> : <Send className="h-5 w-5" />}

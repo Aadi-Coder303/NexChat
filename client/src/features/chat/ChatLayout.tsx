@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import Sidebar from '../../components/Sidebar';
-import { Send, Hash, MoreVertical, Bell, Search, Plus, Sparkles, Ghost } from 'lucide-react';
+import { Send, Hash, MoreVertical, Bell, Search, Plus, Sparkles, Ghost, Menu, X } from 'lucide-react';
 import { Button } from '../../components/Button';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useChatStore } from '../../stores/chatStore';
@@ -14,6 +14,7 @@ export default function ChatLayout() {
   const { channels, activeChannelId, setActiveChannel, messages, fetchChannels, onlineUsers, addMessage } = useChatStore();
   const [decryptedMessages, setDecryptedMessages] = useState<Record<string, Record<string, string>>>({}); // channelId -> messageId -> decryptedContent
   const [messageText, setMessageText] = useState('');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -138,14 +139,29 @@ export default function ChatLayout() {
 
   return (
     <div className="flex h-screen bg-[#050505] overflow-hidden selection:bg-accent/30 font-mono">
-      {/* Sidebar with Grainy Texture */}
-      <div className="relative z-20">
+      {/* Sidebar - Responsive Drawer */}
+      <div className={cn(
+        "fixed inset-y-0 left-0 z-50 transform lg:relative lg:translate-x-0 transition-transform duration-300 ease-in-out",
+        isSidebarOpen ? "translate-x-0" : "-translate-x-full"
+      )}>
         <Sidebar 
           activeChannelId={activeChannelId || undefined} 
-          onChannelSelect={setActiveChannel} 
+          onChannelSelect={(id) => {
+            setActiveChannel(id);
+            setIsSidebarOpen(false); // Close sidebar on mobile after selection
+          }} 
+          onClose={() => setIsSidebarOpen(false)}
         />
         <div className="absolute inset-0 bg-primary/5 pointer-events-none mix-blend-overlay" />
       </div>
+
+      {/* Mobile Overlay */}
+      {isSidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden"
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
       
       <main className="flex-1 flex flex-col relative">
         {/* Surreal Background asset in main view */}
@@ -154,10 +170,18 @@ export default function ChatLayout() {
         </div>
 
         {/* Chat Header */}
-        <header className="h-20 flex items-center justify-between px-8 border-b-2 border-white/5 bg-black/40 backdrop-blur-2xl z-10">
-          <div className="flex items-center gap-4">
-            <div className="h-10 w-10 bg-accent/20 rounded-full flex items-center justify-center border border-accent/30 shadow-[0_0_15px_rgba(16,185,129,0.2)]">
-              <Hash className="h-5 w-5 text-accent" />
+        <header className="h-20 flex items-center justify-between px-4 lg:px-8 border-b-2 border-white/5 bg-black/40 backdrop-blur-2xl z-30">
+          <div className="flex items-center gap-2 lg:gap-4">
+            {/* Mobile Menu Toggle */}
+            <button 
+              onClick={() => setIsSidebarOpen(true)}
+              className="lg:hidden p-2 text-white/40 hover:text-white"
+            >
+              <Menu size={24} />
+            </button>
+
+            <div className="h-8 w-8 lg:h-10 lg:w-10 bg-accent/20 rounded-full flex items-center justify-center border border-accent/30 shadow-[0_0_15px_rgba(16,185,129,0.2)]">
+              <Hash className="h-4 w-4 lg:h-5 lg:w-5 text-accent" />
             </div>
             <div className="flex flex-col">
               <h2 className="text-xl font-display text-white italic tracking-tighter">
@@ -172,16 +196,16 @@ export default function ChatLayout() {
             </div>
           </div>
           
-          <div className="flex items-center gap-6 text-white/30">
-            <div className="flex items-center bg-white/5 rounded-full px-4 py-1.5 border border-white/10">
+          <div className="flex items-center gap-3 lg:gap-6 text-white/30">
+            <div className="hidden sm:flex items-center bg-white/5 rounded-full px-4 py-1.5 border border-white/10">
               <Search className="h-4 w-4 mr-2" />
               <Tooltip content="Search Messages">
                 <input type="text" placeholder="Recall..." className="bg-transparent border-none text-[11px] focus:ring-0 w-32 focus:w-48 transition-all" />
               </Tooltip>
             </div>
-            <div className="h-8 w-px bg-white/10" />
+            <div className="hidden sm:block h-8 w-px bg-white/10" />
             <button className="hover:text-primary transition-colors"><Bell className="h-5 w-5" /></button>
-            <button className="hover:text-accent transition-colors"><Ghost className="h-5 w-5" /></button>
+            <button className="hidden sm:block hover:text-accent transition-colors"><Ghost className="h-5 w-5" /></button>
             <button className="hover:text-white transition-colors"><MoreVertical className="h-5 w-5" /></button>
           </div>
         </header>
@@ -199,7 +223,7 @@ export default function ChatLayout() {
                 transition={{ type: 'spring', stiffness: 100, delay: 0.05 }}
                 className="flex gap-6 group max-w-4xl mx-auto"
               >
-                <div className="h-12 w-12 rounded-[1.25rem] bg-white/5 border border-white/10 flex items-center justify-center text-2xl shadow-xl flex-shrink-0 group-hover:border-primary/50 transition-colors text-white">
+                <div className="h-10 w-10 lg:h-12 lg:w-12 rounded-[1.25rem] bg-white/5 border border-white/10 flex items-center justify-center text-xl lg:text-2xl shadow-xl flex-shrink-0 group-hover:border-primary/50 transition-colors text-white">
                   {msg.sender.username.charAt(0).toUpperCase()}
                 </div>
                 <div className="flex flex-col flex-1">
@@ -222,14 +246,14 @@ export default function ChatLayout() {
               </motion.div>
             )})}
           </AnimatePresence>
-          <div ref={messagesEndRef} />
+          <div ref={messagesEndRef} className="h-4" />
         </div>
 
         {/* Message Input - Floating Surreal Panel */}
-        <div className="p-8 pt-0 z-10">
+        <div className="p-4 lg:p-8 pt-0 z-10">
           <motion.div 
             whileFocus-within={{ scale: 1.01 }}
-            className="max-w-4xl mx-auto glass-retro rounded-[2.5rem] p-3 border-2 border-white/5 shadow-2xl relative"
+            className="max-w-4xl mx-auto glass-retro rounded-[2.5rem] p-2 lg:p-3 border-2 border-white/5 shadow-2xl relative"
           >
             <div className="absolute -top-1 -right-1 text-accent/20 animate-pulse">
                <Sparkles size={32} />

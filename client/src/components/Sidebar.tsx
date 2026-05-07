@@ -1,4 +1,4 @@
-import { LogOut, Hash, Plus, Ghost, Radio } from 'lucide-react';
+import { LogOut, Hash, Plus, Ghost, Radio, X } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 import { useChatStore } from '../stores/chatStore';
 import { Button } from './Button';
@@ -8,9 +8,10 @@ import { motion } from 'framer-motion';
 interface SidebarProps {
   activeChannelId?: string;
   onChannelSelect: (id: string) => void;
+  onClose?: () => void;
 }
 
-export default function Sidebar({ activeChannelId, onChannelSelect }: SidebarProps) {
+export default function Sidebar({ activeChannelId, onChannelSelect, onClose }: SidebarProps) {
   const { user, logout } = useAuthStore();
   const { channels, createChannel } = useChatStore();
 
@@ -29,18 +30,27 @@ export default function Sidebar({ activeChannelId, onChannelSelect }: SidebarPro
   const directChannels = channels.filter(c => c.type === 'direct');
 
   return (
-    <div className="w-80 bg-[#080808] flex flex-col border-r-2 border-white/5 h-full relative overflow-hidden">
+    <div className="w-[280px] sm:w-80 bg-[#080808] flex flex-col border-r-2 border-white/5 h-full relative overflow-hidden">
       {/* Texture Overlay */}
       <div className="absolute inset-0 bg-retro-grain opacity-[0.02] pointer-events-none" />
 
-      {/* Header */}
-      <div className="p-8 flex items-center justify-between relative z-10">
-        <h1 className="text-2xl font-display text-white italic lowercase tracking-tighter flex items-center gap-2">
+      <div className="p-6 sm:p-8 flex items-center justify-between relative z-10">
+        <h1 className="text-xl sm:text-2xl font-display text-white italic lowercase tracking-tighter flex items-center gap-2">
           NexChat <span className="h-2 w-2 rounded-full bg-primary animate-ping" />
         </h1>
-        <Button onClick={handleCreateChannel} variant="outline" size="sm" className="h-10 w-10 p-0 rounded-2xl border-white/10 hover:border-primary/50">
-          <Plus className="h-5 w-5" />
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button onClick={handleCreateChannel} variant="outline" size="sm" className="h-10 w-10 p-0 rounded-2xl border-white/10 hover:border-primary/50">
+            <Plus className="h-5 w-5" />
+          </Button>
+          {onClose && (
+            <button 
+              onClick={onClose}
+              className="lg:hidden p-2 rounded-xl bg-white/5 text-white/40 hover:text-white"
+            >
+              <X size={20} />
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Navigation */}

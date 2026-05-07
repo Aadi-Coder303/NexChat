@@ -128,7 +128,9 @@ export class CryptoEngine {
   static async encryptWithSessionKey(plaintext: string, sessionKey: CryptoKey): Promise<{ content: string; iv: string }> {
     const iv = window.crypto.getRandomValues(new Uint8Array(12));
     const encoded = new TextEncoder().encode(plaintext);
-    const ciphertext = await window.crypto.subtle.encrypt({ name: 'AES-GCM', iv }, sessionKey, encoded);
+    // Pad to nearest 256-byte block to hide message size from the server
+    const padded = CryptoEngine.padPayload(encoded);
+    const ciphertext = await window.crypto.subtle.encrypt({ name: 'AES-GCM', iv }, sessionKey, padded.buffer as ArrayBuffer);
     return {
       content: btoa(String.fromCharCode(...new Uint8Array(ciphertext))),
       iv: btoa(String.fromCharCode(...iv)),
@@ -139,8 +141,9 @@ export class CryptoEngine {
   static async decryptWithSessionKey(contentBase64: string, ivBase64: string, sessionKey: CryptoKey): Promise<string> {
     const content = Uint8Array.from(atob(contentBase64), c => c.charCodeAt(0));
     const iv = Uint8Array.from(atob(ivBase64), c => c.charCodeAt(0));
-    const plain = await window.crypto.subtle.decrypt({ name: 'AES-GCM', iv }, sessionKey, content);
-    return new TextDecoder().decode(plain);
+    const padded = await window.crypto.subtle.decrypt({ name: 'AES-GCM', iv }, sessionKey, content);
+    const unpadded = CryptoEngine.unpadPayload(new Uint8Array(padded));
+    return new TextDecoder().decode(unpadded);
   }
 
   /** Persist a derived session key in IndexedDB with a 30-day TTL. */
@@ -332,6 +335,38 @@ export class CryptoEngine {
       request.onsuccess = () => resolve(request.result || null);
       request.onerror = () => reject(request.error);
     });
+  }
+
+  // ── Payload Padding (Metadata Protection) ──────────────────────────────────
+  //
+  // Pads plaintext to the nearest 256-byte block BEFORE encryption.
+  // This makes all short messages ("hi", "ok", "yes") the same ciphertext size
+  // as a full block message, hiding message lengths from the server.
+  //
+  // Format: [2-byte big-endian original length][original bytes][zero padding]
+  //
+  // Block size 256 bytes → effective quantization:
+  //   1–254 bytes → 256 bytes  (all short messages look identical)
+  //   255–510 bytes → 512 bytes
+  //   511–766 bytes → 768 bytes  (etc.)
+  // ────────────────────────────────────────────────────────────────────────────
+
+  private static readonly PAD_BLOCK = 256;
+
+  private static padPayload(data: Uint8Array): Uint8Array {
+    // 2-byte header stores original length (supports up to 65535 bytes)
+    const needed = 2 + data.length;
+    const padded_len = Math.ceil(needed / this.PAD_BLOCK) * this.PAD_BLOCK;
+    const out = new Uint8Array(padded_len); // zero-initialized
+    out[0] = (data.length >> 8) & 0xff;
+    out[1] = data.length & 0xff;
+    out.set(data, 2);
+    return out;
+  }
+
+  private static unpadPayload(padded: Uint8Array): Uint8Array {
+    const originalLength = (padded[0] << 8) | padded[1];
+    return padded.slice(2, 2 + originalLength);
   }
 
   private static openDB(): Promise<IDBDatabase> {

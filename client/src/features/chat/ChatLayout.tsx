@@ -10,6 +10,7 @@ import { CryptoEngine } from '../../lib/crypto';
 import { useAuthStore } from '../../stores/authStore';
 import { cn } from '../../lib/utils';
 import SafetyNumberModal from '../../components/SafetyNumberModal';
+import ThreatModelModal from '../../components/ThreatModelModal';
 import api from '../../lib/api';
 
 const EMOJI_LIST = ['👍', '❤️', '😂', '😮', '😢', '🔥', '🎉', '👀'];
@@ -33,6 +34,7 @@ export default function ChatLayout() {
   const [safetyModalOpen, setSafetyModalOpen] = useState(false);
   const [isVerified, setIsVerified] = useState(false);
   const [sessionReady, setSessionReady] = useState(false);
+  const [threatModelOpen, setThreatModelOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -325,7 +327,11 @@ export default function ChatLayout() {
               <input type="text" placeholder="Recall..." className="bg-transparent border-none text-[11px] focus:ring-0 w-32" />
             </div>
             <button className="hover:text-primary transition-colors"><Bell className="h-5 w-5" /></button>
-            <button className="hover:text-white transition-colors"><MoreVertical className="h-5 w-5" /></button>
+            <Tooltip content="Security & privacy disclosure">
+              <button onClick={() => setThreatModelOpen(true)} className="hover:text-white transition-colors">
+                <MoreVertical className="h-5 w-5" />
+              </button>
+            </Tooltip>
           </div>
         </header>
 
@@ -611,6 +617,9 @@ export default function ChatLayout() {
           />
         ) : null;
       })()}
+
+      {/* Security & Privacy Threat Model */}
+      <ThreatModelModal isOpen={threatModelOpen} onClose={() => setThreatModelOpen(false)} />
     </div>
   );
 }

@@ -4,6 +4,14 @@ import { generateAccessToken, generateRefreshToken } from '../lib/jwt';
 
 export class AuthService {
   static async register(email: string, username: string, password_h: string) {
+    const existingUser = await prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (existingUser) {
+      throw new Error('User with this email already exists');
+    }
+
     const hashedPassword = await argon2.hash(password_h);
     
     const user = await prisma.user.create({

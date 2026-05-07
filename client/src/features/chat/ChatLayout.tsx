@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import Sidebar from '../../components/Sidebar';
-import { Send, Hash, MoreVertical, Bell, Phone, Video, Search, Plus, Sparkles, Ghost } from 'lucide-react';
+import { Send, Hash, MoreVertical, Bell, Search, Plus, Sparkles, Ghost } from 'lucide-react';
 import { Button } from '../../components/Button';
 import { motion, AnimatePresence } from 'framer-motion';
 

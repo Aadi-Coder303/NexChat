@@ -36,7 +36,21 @@ export class MessageService {
     return message;
   }
 
-  static async getMessages(channelId: string, cursor?: string, limit: number = 50) {
+  static async getMessages(channelId: string, userId: string, cursor?: string, limit: number = 50) {
+    // Verify membership
+    const membership = await prisma.channelMember.findUnique({
+      where: {
+        channelId_userId: {
+          channelId,
+          userId,
+        },
+      },
+    });
+
+    if (!membership) {
+      throw new Error('User is not a member of this channel');
+    }
+
     const messages = await prisma.message.findMany({
       where: { channelId },
       take: limit,

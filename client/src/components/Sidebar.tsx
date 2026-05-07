@@ -1,4 +1,4 @@
-import { LogOut, Hash, MessageSquare, Settings, Search, Plus, Ghost, Radio, Circle } from 'lucide-react';
+import { LogOut, Hash, Plus, Ghost, Radio } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 import { Button } from './Button';
 import { cn } from '../lib/utils';

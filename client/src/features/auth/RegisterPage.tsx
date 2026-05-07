@@ -31,6 +31,7 @@ export default function RegisterPage() {
       setError(null);
       await registerUser(data.username, data.email, data.password);
       navigate('/');
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       setError(err.response?.data?.error || 'Registration failed. Please try again.');
     }

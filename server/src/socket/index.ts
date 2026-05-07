@@ -1,5 +1,6 @@
 import { Server, Socket } from 'socket.io';
 import { verifyAccessToken } from '../lib/jwt';
+import { prisma } from '../lib/prisma';
 import { MessageService } from '../services/message.service';
 import { PresenceService } from '../services/presence.service';
 
@@ -39,7 +40,21 @@ export const setupSocketHandlers = (io: Server) => {
       await PresenceService.setOnline(userId);
     });
 
-    socket.on('channel:join', ({ channelId }) => {
+    socket.on('channel:join', async ({ channelId }) => {
+      // Verify membership
+      const membership = await prisma.channelMember.findUnique({
+        where: {
+          channelId_userId: {
+            channelId,
+            userId,
+          },
+        },
+      });
+
+      if (!membership) {
+        return socket.emit('error', { message: 'You are not a member of this channel' });
+      }
+
       socket.join(`channel:${channelId}`);
       console.log(`📣 User ${userId} joined channel: ${channelId}`);
     });

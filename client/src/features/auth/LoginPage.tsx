@@ -28,6 +28,7 @@ export default function LoginPage() {
     try {
       setError(null);
       await login(data.email, data.password);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       setError(err.response?.data?.error || 'Login failed. Please try again.');
     }

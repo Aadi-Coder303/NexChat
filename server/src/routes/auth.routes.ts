@@ -1,12 +1,28 @@
 import { Router } from 'express';
+import { z } from 'zod';
 import { AuthService } from '../services/auth.service';
 
 const router = Router();
 
-router.post('/register', async (req, res) => {
+const registerSchema = z.object({
+  email: z.string().email(),
+  username: z.string().min(3).max(20),
+  password: z.string().min(6),
+});
+
+const loginSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(1),
+});
+
+router.post('/register', async (req, res, next) => {
   try {
-    const { email, username, password } = req.body;
-    const { user, accessToken, refreshToken } = await AuthService.register(email, username, password);
+    const validated = registerSchema.parse(req.body);
+    const { user, accessToken, refreshToken } = await AuthService.register(
+      validated.email, 
+      validated.username, 
+      validated.password
+    );
     
     res.cookie('refresh_token', refreshToken, {
       httpOnly: true,
@@ -17,14 +33,17 @@ router.post('/register', async (req, res) => {
 
     res.status(201).json({ user: { id: user.id, email: user.email, username: user.username }, accessToken });
   } catch (error: any) {
-    res.status(400).json({ error: error.message });
+    next(error);
   }
 });
 
-router.post('/login', async (req, res) => {
+router.post('/login', async (req, res, next) => {
   try {
-    const { email, password } = req.body;
-    const { user, accessToken, refreshToken } = await AuthService.login(email, password);
+    const validated = loginSchema.parse(req.body);
+    const { user, accessToken, refreshToken } = await AuthService.login(
+      validated.email, 
+      validated.password
+    );
 
     res.cookie('refresh_token', refreshToken, {
       httpOnly: true,
@@ -35,7 +54,7 @@ router.post('/login', async (req, res) => {
 
     res.json({ user: { id: user.id, email: user.email, username: user.username }, accessToken });
   } catch (error: any) {
-    res.status(401).json({ error: error.message });
+    next(error);
   }
 });
 

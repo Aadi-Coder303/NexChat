@@ -3,8 +3,13 @@ import crypto from 'crypto';
 import { prisma } from '../lib/prisma';
 import { generateAccessToken, generateRefreshToken } from '../lib/jwt';
 import { AppError } from '../utils/errors';
+import crypto from 'crypto';
 
 export class AuthService {
+  private static generateFriendCode(): string {
+    return crypto.randomBytes(4).toString('hex').substring(0, 7).toUpperCase();
+  }
+
   static async register(username: string, password_h: string, publicKey?: string) {
     const existingUser = await prisma.user.findUnique({
       where: { username },
@@ -26,6 +31,7 @@ export class AuthService {
         passwordH: hashedPassword,
         recoveryKeyH: hashedRecoveryKey,
         publicKey,
+        friendCode: this.generateFriendCode(),
       },
     });
 

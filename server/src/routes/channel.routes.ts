@@ -30,6 +30,39 @@ router.post('/', async (req: any, res, next) => {
   }
 });
 
+// Connect with a friend via NexCode
+router.post('/connect', async (req: any, res, next) => {
+  try {
+    const { code } = req.body;
+    
+    // Find user by code
+    const friend = await prisma.user.findUnique({
+      where: { friendCode: code.toUpperCase() },
+      select: { id: true, username: true }
+    });
+
+    if (!friend) {
+      return res.status(404).json({ error: 'Identity not found in the void' });
+    }
+
+    if (friend.id === req.userId) {
+      return res.status(400).json({ error: 'You cannot connect with your own apparition' });
+    }
+
+    // Create direct channel
+    const channel = await ChannelService.createChannel(
+      friend.username,
+      'direct',
+      req.userId,
+      [req.userId, friend.id]
+    );
+
+    res.status(201).json(channel);
+  } catch (error: any) {
+    next(error);
+  }
+});
+
 // Get messages for a channel (paginated)
 router.get('/:id/messages', async (req: any, res, next) => {
   try {

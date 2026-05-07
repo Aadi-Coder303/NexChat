@@ -38,7 +38,12 @@ router.post('/register', async (req, res, next) => {
     });
 
     res.status(201).json({ 
-      user: { id: user.id, username: user.username, publicKey: user.publicKey }, 
+      user: { 
+        id: user.id, 
+        username: user.username, 
+        publicKey: user.publicKey,
+        friendCode: user.friendCode
+      }, 
       accessToken, 
       recoveryKey 
     });
@@ -62,7 +67,15 @@ router.post('/login', async (req, res, next) => {
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
 
-    res.json({ user: { id: user.id, username: user.username, publicKey: user.publicKey }, accessToken });
+    res.json({ 
+      user: { 
+        id: user.id, 
+        username: user.username, 
+        publicKey: user.publicKey,
+        friendCode: user.friendCode
+      }, 
+      accessToken 
+    });
   } catch (error: any) {
     next(error);
   }
@@ -89,11 +102,6 @@ router.post('/users/:id/public-key', async (req: any, res, next) => {
   try {
     const { id } = req.params;
     const { publicKey } = req.body;
-    
-    // Simple authorization: only the user can update their own key
-    // In a real app, we'd use a middleware, but since we have req.userId from authMiddleware...
-    // Wait, authRoutes is NOT protected by authMiddleware in index.ts.
-    // I should protect this specific route.
     
     await AuthService.updatePublicKey(id, publicKey);
     res.json({ ok: true });

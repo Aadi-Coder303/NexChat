@@ -1,4 +1,5 @@
-import { LogOut, Hash, Plus, Ghost, Radio, X } from 'lucide-react';
+import { LogOut, Hash, Plus, Ghost, Radio, X, UserPlus, Copy, Check } from 'lucide-react';
+import { useState } from 'react';
 import { useAuthStore } from '../stores/authStore';
 import { useChatStore } from '../stores/chatStore';
 import { Button } from './Button';
@@ -13,7 +14,27 @@ interface SidebarProps {
 
 export default function Sidebar({ activeChannelId, onChannelSelect, onClose }: SidebarProps) {
   const { user, logout } = useAuthStore();
-  const { channels, createChannel } = useChatStore();
+  const { channels, createChannel, connectByCode } = useChatStore();
+  const [copied, setCopied] = useState(false);
+
+  const handleConnect = async () => {
+    const code = window.prompt('Enter the Entity NexCode:');
+    if (code && code.trim()) {
+      try {
+        await connectByCode(code.trim());
+      } catch (error: any) {
+        alert(error.response?.data?.error || 'Failed to locate entity in the void');
+      }
+    }
+  };
+
+  const copyCode = () => {
+    if (user?.friendCode) {
+      navigator.clipboard.writeText(user.friendCode);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
 
   const handleCreateChannel = async () => {
     const name = window.prompt('Enter channel name:');
@@ -91,9 +112,17 @@ export default function Sidebar({ activeChannelId, onChannelSelect, onClose }: S
 
         {/* Entities (DMs) */}
         <section className="space-y-2">
-          <div className="px-4 flex items-center gap-2 text-white/20 text-[10px] font-bold uppercase tracking-[0.3em] mb-4">
-            <Ghost size={12} />
-            <span>Apparitions</span>
+          <div className="px-4 flex items-center justify-between text-white/20 text-[10px] font-bold uppercase tracking-[0.3em] mb-4">
+            <div className="flex items-center gap-2">
+              <Ghost size={12} />
+              <span>Apparitions</span>
+            </div>
+            <button 
+              onClick={handleConnect}
+              className="hover:text-accent transition-colors flex items-center gap-1 group/add"
+            >
+              <UserPlus size={12} className="group-hover/add:scale-110 transition-transform" />
+            </button>
           </div>
           <div className="space-y-1">
             {directChannels.map(dm => (
@@ -136,9 +165,15 @@ export default function Sidebar({ activeChannelId, onChannelSelect, onClose }: S
                 className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-accent border-2 border-[#080808]" 
               />
             </div>
-            <div className="flex flex-col">
+            <div className="flex flex-col flex-1">
               <span className="text-sm font-bold text-white italic tracking-tighter">{user?.username}</span>
-              <span className="text-[9px] font-bold text-white/20 uppercase tracking-widest">Active Presence</span>
+              <button 
+                onClick={copyCode}
+                className="flex items-center gap-1.5 text-[9px] font-bold text-white/20 uppercase tracking-widest hover:text-primary transition-colors group/code"
+              >
+                {user?.friendCode}
+                {copied ? <Check size={10} className="text-primary" /> : <Copy size={10} className="opacity-0 group-hover/code:opacity-100 transition-opacity" />}
+              </button>
             </div>
           </div>
           <button 

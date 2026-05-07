@@ -46,6 +46,7 @@ interface ChatState {
   updateMessageId: (channelId: string, clientTempId: string, serverId: string) => void;
   setOnlineStatus: (userId: string, status: 'online' | 'offline') => void;
   createChannel: (name: string, type: 'direct' | 'group', memberIds: string[]) => Promise<void>;
+  connectByCode: (code: string) => Promise<void>;
 }
 
 export const useChatStore = create<ChatState>((set, get) => ({
@@ -126,6 +127,19 @@ export const useChatStore = create<ChatState>((set, get) => ({
       get().setActiveChannel(response.data.id);
     } catch (error) {
       console.error('Failed to create channel:', error);
+      throw error;
+    }
+  },
+
+  connectByCode: async (code: string) => {
+    try {
+      const response = await api.post('/channels/connect', { code });
+      set((state) => ({
+        channels: [response.data, ...state.channels],
+      }));
+      get().setActiveChannel(response.data.id);
+    } catch (error: any) {
+      console.error('Failed to connect by code:', error);
       throw error;
     }
   },

@@ -17,6 +17,7 @@ model User {
   passwordH    String   @map("password_h")
   recoveryKeyH String   @map("recovery_key_h")
   publicKey    String?  @map("public_key")
+  friendCode   String   @unique @map("friend_code")
   createdAt    DateTime @default(now()) @map("created_at")
   lastSeen     DateTime @default(now()) @map("last_seen")
 

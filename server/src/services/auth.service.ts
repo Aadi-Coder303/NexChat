@@ -53,6 +53,8 @@ export class AuthService {
     const refreshToken = generateRefreshToken(user.id);
 
     return { user, accessToken, refreshToken };
+  }
+
   static async recoverAccount(username: string, recoveryKey: string, newPassword_h: string) {
     const user = await prisma.user.findUnique({
       where: { username },

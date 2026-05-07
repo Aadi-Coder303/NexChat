@@ -9,7 +9,7 @@ class SocketService {
   private typingTimer: ReturnType<typeof setTimeout> | null = null;
 
   connect() {
-    if (this.socket?.connected) return;
+    if (this.socket) return;
     const token = useAuthStore.getState().accessToken;
     if (!token) return;
 

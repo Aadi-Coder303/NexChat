@@ -292,7 +292,10 @@ export default function ChatLayout() {
             </div>
             <div className="flex flex-col">
               <h2 className="text-xl font-display text-white italic tracking-tighter">
-                {activeChannel?.type === 'group' ? '#' : '@'}{activeChannel?.name || 'void-stream'}
+                {activeChannel?.type === 'group' ? '#' : '@'}
+                {activeChannel?.type === 'direct' 
+                  ? (activeChannel.members?.find(m => m.user.id !== user?.id)?.user.username || activeChannel.name)
+                  : (activeChannel?.name || 'void-stream')}
               </h2>
               <div className="flex items-center gap-2">
                 <div className="h-1.5 w-1.5 rounded-full bg-accent animate-pulse" />

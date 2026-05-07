@@ -25,21 +25,23 @@ export const setupSocketHandlers = (io: Server) => {
 
     socket.join(`user:${userId}`);
 
+    // Auto-join all channels the user is a member of so they receive all messages
+    prisma.channelMember.findMany({ where: { userId } }).then(memberships => {
+      memberships.forEach(m => socket.join(`channel:${m.channelId}`));
+    });
+
     socket.on('heartbeat', async () => {
       await PresenceService.setOnline(userId);
     });
 
+    // Also allow joining new channels dynamically if they are added
     socket.on('channel:join', async ({ channelId }) => {
       const membership = await prisma.channelMember.findUnique({
         where: { channelId_userId: { channelId, userId } },
       });
-      if (!membership) return socket.emit('error', { message: 'Not a member of this channel' });
-      socket.join(`channel:${channelId}`);
-      console.log(`📣 User ${userId} joined channel: ${channelId}`);
-    });
-
-    socket.on('channel:leave', ({ channelId }) => {
-      socket.leave(`channel:${channelId}`);
+      if (membership) {
+        socket.join(`channel:${channelId}`);
+      }
     });
 
     // Send a new message

@@ -83,7 +83,7 @@ app.use(helmet({
 
 // ── CORS ────────────────────────────────────────────────────────────────────
 app.use(cors(corsOptions));
-app.options('*', cors(corsOptions));     // handle all preflight requests
+app.options(/.*/, cors(corsOptions));     // handle all preflight requests
 
 // ── Body parsing & cookies ──────────────────────────────────────────────────
 app.use(express.json({ limit: '10kb' }));

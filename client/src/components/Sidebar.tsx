@@ -142,25 +142,29 @@ export default function Sidebar({ activeChannelId, onChannelSelect, onClose }: S
               </button>
             </div>
             <div className="space-y-1">
-              {directChannels.map(dm => (
-                <button
-                  key={dm.id}
-                  onClick={() => { onChannelSelect(dm.id); onClose?.(); }}
-                  className={cn(
-                    "w-full flex items-center gap-4 px-4 py-3 rounded-2xl text-sm transition-all group relative",
-                    activeChannelId === dm.id
-                      ? "text-accent font-bold bg-accent/5"
-                      : "text-white/40 hover:bg-white/5 hover:text-white"
-                  )}
-                >
-                  <div className="relative">
-                    <div className="h-10 w-10 rounded-[1rem] bg-white/5 border border-white/5 flex items-center justify-center text-lg filter grayscale group-hover:grayscale-0 transition-all text-white">
-                      {dm.name.charAt(0).toUpperCase()}
+              {directChannels.map(dm => {
+                const otherMember = dm.members?.find(m => m.user.id !== user?.id)?.user;
+                const displayName = otherMember?.username || dm.name;
+                return (
+                  <button
+                    key={dm.id}
+                    onClick={() => { onChannelSelect(dm.id); onClose?.(); }}
+                    className={cn(
+                      "w-full flex items-center gap-4 px-4 py-3 rounded-2xl text-sm transition-all group relative",
+                      activeChannelId === dm.id
+                        ? "text-accent font-bold bg-accent/5"
+                        : "text-white/40 hover:bg-white/5 hover:text-white"
+                    )}
+                  >
+                    <div className="relative">
+                      <div className="h-10 w-10 rounded-[1rem] bg-white/5 border border-white/5 flex items-center justify-center text-lg filter grayscale group-hover:grayscale-0 transition-all text-white">
+                        {displayName.charAt(0).toUpperCase()}
+                      </div>
                     </div>
-                  </div>
-                  <span className="italic tracking-tight truncate">{dm.name}</span>
-                </button>
-              ))}
+                    <span className="italic tracking-tight truncate">{displayName}</span>
+                  </button>
+                );
+              })}
               {directChannels.length === 0 && (
                 <div className="px-4 text-xs text-white/30 italic">No apparitions found.</div>
               )}

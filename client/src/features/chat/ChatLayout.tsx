@@ -7,7 +7,7 @@ import { useChatStore } from '../../stores/chatStore';
 import { socketService } from '../../lib/socket';
 
 export default function ChatLayout() {
-  const { channels, activeChannelId, setActiveChannelId, messages, fetchChannels, onlineUsers } = useChatStore();
+  const { channels, activeChannelId, setActiveChannel, messages, fetchChannels, onlineUsers } = useChatStore();
   const [messageText, setMessageText] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -22,9 +22,9 @@ export default function ChatLayout() {
 
   useEffect(() => {
     if (channels.length > 0 && !activeChannelId) {
-      setActiveChannelId(channels[0].id);
+      setActiveChannel(channels[0].id);
     }
-  }, [channels, activeChannelId, setActiveChannelId]);
+  }, [channels, activeChannelId, setActiveChannel]);
 
   useEffect(() => {
     if (activeChannelId) {
@@ -64,8 +64,8 @@ export default function ChatLayout() {
       {/* Sidebar with Grainy Texture */}
       <div className="relative z-20">
         <Sidebar 
-          activeChannelId={activeChannelId} 
-          onChannelSelect={setActiveChannelId} 
+          activeChannelId={activeChannelId || undefined} 
+          onChannelSelect={setActiveChannel} 
         />
         <div className="absolute inset-0 bg-primary/5 pointer-events-none mix-blend-overlay" />
       </div>
@@ -110,7 +110,7 @@ export default function ChatLayout() {
         {/* Message List with Surreal Motion */}
         <div className="flex-1 overflow-y-auto p-8 space-y-8 relative scroll-smooth">
           <AnimatePresence initial={false}>
-            {activeMessages.map((msg, index) => {
+            {activeMessages.map((msg) => {
               const time = new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
               return (
               <motion.div

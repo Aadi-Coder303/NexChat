@@ -101,7 +101,7 @@ export default function RegisterPage() {
               </div>
               <Button
                 onClick={() => navigate('/')}
-                variant="primary"
+                variant="default"
                 className="w-full h-14 rounded-2xl text-lg font-bold"
               >
                 I have saved it. Enter NexChat.

@@ -19,15 +19,13 @@ export default function ChatLayout() {
   const { user } = useAuthStore();
   const {
     channels, activeChannelId, setActiveChannel, messages, fetchChannels,
-    onlineUsers, typingUsers, hasMoreMessages, loadMoreMessages,
+    onlineUsers, typingUsers, hasMoreMessages, loadMoreMessages, sessionSyncToggle
   } = useChatStore();
 
   const [decryptedMessages, setDecryptedMessages] = useState<Record<string, Record<string, string>>>({});
   const [messageText, setMessageText] = useState('');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [replyTo, setReplyTo] = useState<Message | null>(null);
-  const [editingMessage, setEditingMessage] = useState<Message | null>(null);
-  const [editText, setEditText] = useState('');
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; message: Message } | null>(null);
   const [emojiPickerFor, setEmojiPickerFor] = useState<string | null>(null);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -96,7 +94,7 @@ export default function ChatLayout() {
     };
 
     initSession();
-  }, [activeChannelId, user]);
+  }, [activeChannelId, user, sessionSyncToggle]);
 
   // Auto-scroll
   useEffect(() => {
@@ -157,7 +155,7 @@ export default function ChatLayout() {
       }
     };
     decryptAll();
-  }, [messages, activeChannelId, user]);
+  }, [messages, activeChannelId, user, sessionSyncToggle]);
 
   const activeMessages = activeChannelId ? (messages[activeChannelId] || []) : [];
   const channelTypingUsers = activeChannelId ? (typingUsers[activeChannelId] || []) : [];
@@ -174,16 +172,6 @@ export default function ChatLayout() {
   };
 
   const handleSendMessage = async () => {
-    const text = editingMessage ? editText.trim() : messageText.trim();
-    if (!text || !activeChannelId || !activeChannel || !user) return;
-
-    if (editingMessage) {
-      socketService.editMessage(activeChannelId, editingMessage.id, text);
-      setEditingMessage(null);
-      setEditText('');
-      return;
-    }
-
     setMessageText('');
     setReplyTo(null);
     socketService.stopTyping(activeChannelId);
@@ -234,13 +222,6 @@ export default function ChatLayout() {
   const handleDelete = (msg: Message) => {
     if (activeChannelId) socketService.deleteMessage(activeChannelId, msg.id);
     setContextMenu(null);
-  };
-
-  const handleStartEdit = (msg: Message) => {
-    setEditingMessage(msg);
-    setEditText(msg.content);
-    setContextMenu(null);
-    setTimeout(() => textareaRef.current?.focus(), 50);
   };
 
   const handleReact = (msg: Message, emoji: string) => {
@@ -379,7 +360,6 @@ export default function ChatLayout() {
                     <div className="flex items-baseline gap-3 mb-1">
                       <span className="font-display text-sm text-primary italic lowercase tracking-tight">{msg.sender.username}</span>
                       <span className="text-[9px] font-bold text-white/20 uppercase tracking-widest">{time}</span>
-                      {msg.editedAt && !msg.deletedAt && <span className="text-[9px] text-white/20 italic">(edited)</span>}
                     </div>
 
                     {/* Reply-to preview */}
@@ -421,18 +401,11 @@ export default function ChatLayout() {
                             </button>
                           </Tooltip>
                           {isOwnMessage && (
-                            <>
-                              <Tooltip content="Edit">
-                                <button onClick={() => handleStartEdit(msg)} className="p-1 hover:text-accent text-white/30 transition-colors">
-                                  <Edit3 size={13} />
-                                </button>
-                              </Tooltip>
-                              <Tooltip content="Delete">
-                                <button onClick={() => handleDelete(msg)} className="p-1 hover:text-red-400 text-white/30 transition-colors">
-                                  <Trash2 size={13} />
-                                </button>
-                              </Tooltip>
-                            </>
+                            <Tooltip content="Delete">
+                              <button onClick={() => handleDelete(msg)} className="p-1 hover:text-red-400 text-white/30 transition-colors">
+                                <Trash2 size={13} />
+                              </button>
+                            </Tooltip>
                           )}
                         </div>
                       )}

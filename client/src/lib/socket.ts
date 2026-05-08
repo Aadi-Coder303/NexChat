@@ -42,12 +42,20 @@ class SocketService {
       useChatStore.getState().deleteMessageLocally(channelId, messageId, message);
     });
 
-    // Message edited
-    this.socket.on('message:edited', ({ channelId, message }) => {
-      useChatStore.getState().updateMessage(channelId, message);
+    // Channel created (DM)
+    this.socket.on('channel:created', (channel) => {
+      useChatStore.getState().fetchChannels();
     });
 
-    // Reaction toggled
+    // New member joined channel
+    this.socket.on('channel:member_joined', ({ channelId, member }) => {
+      useChatStore.getState().fetchChannels(); // Refresh channel members
+    });
+
+    // New session key published
+    this.socket.on('session:new', ({ channelId, session }) => {
+      useChatStore.getState().handleNewSession(channelId, session);
+    });    // Reaction toggled
     this.socket.on('message:reaction', ({ channelId, messageId, reactions }) => {
       useChatStore.getState().updateReactions(channelId, messageId, reactions);
     });
@@ -108,10 +116,6 @@ class SocketService {
 
   deleteMessage(channelId: string, messageId: string) {
     this.socket?.emit('message:delete', { channelId, messageId });
-  }
-
-  editMessage(channelId: string, messageId: string, content: string) {
-    this.socket?.emit('message:edit', { channelId, messageId, content });
   }
 
   reactToMessage(channelId: string, messageId: string, emoji: string) {

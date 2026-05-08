@@ -82,15 +82,6 @@ export const setupSocketHandlers = (io: Server) => {
       }
     });
 
-    // Edit a message
-    socket.on('message:edit', async ({ messageId, channelId, content }) => {
-      try {
-        const message = await MessageService.editMessage(messageId, userId, content);
-        io.to(`channel:${channelId}`).emit('message:edited', { messageId, channelId, message });
-      } catch (error: any) {
-        socket.emit('error', { message: error.message });
-      }
-    });
 
     // Toggle a reaction
     socket.on('message:react', async ({ messageId, channelId, emoji }) => {

@@ -63,6 +63,9 @@ const io = new Server(server, {
 // Setup Socket.io handlers
 setupSocketHandlers(io);
 
+// Attach io to the app so routes can access it without circular dependencies
+app.set('io', io);
+
 // ── Security headers (Helmet) ───────────────────────────────────────────────
 app.use(helmet({
   contentSecurityPolicy: {

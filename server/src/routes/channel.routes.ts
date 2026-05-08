@@ -37,6 +37,10 @@ router.post('/connect', async (req: any, res, next) => {
     if (!friend) return res.status(404).json({ error: 'Identity not found in the void' });
     if (friend.id === req.userId) return res.status(400).json({ error: 'You cannot connect with your own apparition' });
     const channel = await ChannelService.createChannel(friend.username, 'direct', req.userId, [req.userId, friend.id]);
+    
+    // Notify the other user that a new channel was created and they were added
+    req.app.get('io')?.to(`user:${friend.id}`).emit('channel:created', channel);
+    
     res.status(201).json(channel);
   } catch (error: any) {
     next(error);
@@ -49,6 +53,13 @@ router.post('/join', async (req: any, res, next) => {
     const { code } = req.body;
     if (!code?.trim()) return res.status(400).json({ error: 'Invite code is required' });
     const channel = await ChannelService.joinByInviteCode(code.trim(), req.userId);
+    
+    // Notify existing members that someone joined
+    const newMember = channel?.members?.find((m: any) => m.userId === req.userId);
+    if (newMember) {
+      req.app.get('io')?.to(`channel:${channel.id}`).emit('channel:member_joined', { channelId: channel.id, member: newMember });
+    }
+    
     res.status(200).json(channel);
   } catch (error: any) {
     next(error);
@@ -81,6 +92,10 @@ router.post('/:id/session', async (req: any, res, next) => {
       create: { channelId: req.params.id, userId: req.userId, ephemeralPubKey },
       update: { ephemeralPubKey },
     });
+    
+    // Broadcast the new session key to other members in the channel so they can instantly derive the AES key
+    req.app.get('io')?.to(`channel:${req.params.id}`).emit('session:new', { channelId: req.params.id, session });
+    
     res.json(session);
   } catch (error: any) {
     next(error);

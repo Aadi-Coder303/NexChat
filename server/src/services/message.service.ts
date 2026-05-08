@@ -85,23 +85,7 @@ export class MessageService {
     return updated;
   }
 
-  static async editMessage(messageId: string, userId: string, newContent: string) {
-    if (!newContent || newContent.length > 20000) {
-      throw new AppError('Message is either empty or exceeds the maximum length of 20,000 characters', 400);
-    }
 
-    const message = await prisma.message.findUnique({ where: { id: messageId } });
-    if (!message) throw new AppError('Message not found', 404);
-    if (message.senderId !== userId) throw new AppError('You can only edit your own messages', 403);
-    if ((message as any).deletedAt) throw new AppError('Cannot edit a deleted message', 400);
-
-    const updated = await (prisma.message as any).update({
-      where: { id: messageId },
-      data: { content: newContent, editedAt: new Date() },
-      select: MESSAGE_SELECT,
-    });
-    return updated;
-  }
 
   static async toggleReaction(messageId: string, userId: string, emoji: string) {
     const existing = await (prisma.reaction as any).findUnique({

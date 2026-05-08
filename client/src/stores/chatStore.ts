@@ -61,13 +61,14 @@ interface ChatState {
   typingUsers: Record<string, string[]>; // channelId -> userIds typing
   hasMoreMessages: Record<string, boolean>;
   isLoadingChannels: boolean;
+  sessionSyncToggle: boolean;
 
   fetchChannels: () => Promise<void>;
   setActiveChannel: (id: string) => void;
   fetchMessages: (channelId: string) => Promise<void>;
   loadMoreMessages: (channelId: string) => Promise<void>;
   addMessage: (channelId: string, message: Message) => void;
-  updateMessage: (channelId: string, message: Message) => void;
+  handleNewSession: (channelId: string, session: any) => void;
   deleteMessageLocally: (channelId: string, messageId: string, updatedMessage: Message) => void;
   updateReactions: (channelId: string, messageId: string, reactions: Reaction[]) => void;
   updateMessageId: (channelId: string, clientTempId: string, serverId: string, serverMessage?: Message) => void;
@@ -94,6 +95,7 @@ export const useChatStore = create<ChatState>()(
       typingUsers: {},
       hasMoreMessages: {},
       isLoadingChannels: false,
+      sessionSyncToggle: false,
 
       fetchChannels: async () => {
         set({ isLoadingChannels: true });
@@ -171,15 +173,9 @@ export const useChatStore = create<ChatState>()(
         }));
       },
 
-      updateMessage: (channelId, message) => {
-        set((state) => ({
-          messages: {
-            ...state.messages,
-            [channelId]: (state.messages[channelId] || []).map((m) =>
-              m.id === message.id ? { ...m, ...message } : m
-            ),
-          },
-        }));
+      handleNewSession: (channelId, session) => {
+        // Toggle the sync state so ChatLayout's useEffect gets re-triggered
+        set((state) => ({ sessionSyncToggle: !state.sessionSyncToggle }));
       },
 
       deleteMessageLocally: (channelId, messageId, updatedMessage) => {

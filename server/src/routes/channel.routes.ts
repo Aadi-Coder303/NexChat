@@ -66,6 +66,26 @@ router.post('/join', async (req: any, res, next) => {
   }
 });
 
+// Accept a channel request
+router.post('/:id/accept', async (req: any, res, next) => {
+  try {
+    const channel = await ChannelService.acceptRequest(req.params.id, req.userId);
+    res.json(channel);
+  } catch (error: any) {
+    next(error);
+  }
+});
+
+// Decline a channel request
+router.post('/:id/decline', async (req: any, res, next) => {
+  try {
+    const result = await ChannelService.declineRequest(req.params.id, req.userId);
+    res.json(result);
+  } catch (error: any) {
+    next(error);
+  }
+});
+
 // Generate (or fetch existing) invite code for a group channel
 router.post('/:id/invite', async (req: any, res, next) => {
   try {

@@ -1,4 +1,4 @@
-import { LogOut, Hash, Ghost, Radio, X, UserPlus, Copy, Check, Link2, DoorOpen } from 'lucide-react';
+import { LogOut, Hash, Ghost, Radio, X, Copy, Check, Link2, DoorOpen, Plus } from 'lucide-react';
 import { useState } from 'react';
 import { useAuthStore } from '../stores/authStore';
 import { useChatStore } from '../stores/chatStore';
@@ -34,7 +34,8 @@ export default function Sidebar({ activeChannelId, onChannelSelect, onClose }: S
   };
 
   const groupChannels = channels.filter(c => c.type === 'group');
-  const directChannels = channels.filter(c => c.type === 'direct');
+  const directChannels = channels.filter(c => c.type === 'direct' && c.members?.find(m => m.user.id === user?.id)?.status !== 'pending');
+  const pendingChannels = channels.filter(c => c.type === 'direct' && c.members?.find(m => m.user.id === user?.id)?.status === 'pending');
 
   return (
     <>
@@ -47,6 +48,13 @@ export default function Sidebar({ activeChannelId, onChannelSelect, onClose }: S
             NexChat <span className="h-2 w-2 rounded-full bg-primary animate-ping" />
           </h1>
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => setAddFriendOpen(true)}
+              className="p-2 rounded-xl bg-primary/20 text-primary hover:bg-primary hover:text-black transition-all shadow-[0_0_15px_rgba(139,92,246,0.3)] hover:shadow-[0_0_25px_rgba(139,92,246,0.5)]"
+              title="New Connection"
+            >
+              <Plus size={20} strokeWidth={3} />
+            </button>
             {onClose && (
               <button
                 onClick={onClose}
@@ -67,13 +75,6 @@ export default function Sidebar({ activeChannelId, onChannelSelect, onClose }: S
                 <Radio size={12} />
                 <span>Frequencies</span>
               </div>
-              <button
-                onClick={() => setAddFriendOpen(true)}
-                className="hover:text-accent transition-colors flex items-center gap-1 group/add"
-                title="Add friend or join group"
-              >
-                <UserPlus size={12} className="group-hover/add:scale-110 transition-transform" />
-              </button>
             </div>
             <div className="space-y-1">
               {groupChannels.map(channel => {
@@ -133,13 +134,6 @@ export default function Sidebar({ activeChannelId, onChannelSelect, onClose }: S
                 <Ghost size={12} />
                 <span>Apparitions</span>
               </div>
-              <button
-                onClick={() => setAddFriendOpen(true)}
-                className="hover:text-primary transition-colors flex items-center gap-1 group/add"
-                title="Add a friend by NexCode"
-              >
-                <UserPlus size={12} className="group-hover/add:scale-110 transition-transform" />
-              </button>
             </div>
             <div className="space-y-1">
               {directChannels.map(dm => {
@@ -173,6 +167,46 @@ export default function Sidebar({ activeChannelId, onChannelSelect, onClose }: S
               )}
             </div>
           </section>
+
+          {/* Pending Requests */}
+          {pendingChannels.length > 0 && (
+            <section className="space-y-2 mt-6">
+              <div className="px-4 flex items-center justify-between text-yellow-500/50 text-[10px] font-bold uppercase tracking-[0.3em] mb-4">
+                <div className="flex items-center gap-2">
+                  <Ghost size={12} />
+                  <span>Requests ({pendingChannels.length})</span>
+                </div>
+              </div>
+              <div className="space-y-1">
+                {pendingChannels.map(dm => {
+                  const otherMember = dm.members?.find(m => m.user.id !== user?.id)?.user;
+                  const displayName = otherMember?.username || dm.name;
+                  return (
+                    <button
+                      key={dm.id}
+                      onClick={() => { onChannelSelect(dm.id); onClose?.(); }}
+                      className={cn(
+                        "w-full flex items-center gap-4 px-4 py-3 rounded-2xl text-sm transition-all duration-300 group relative",
+                        activeChannelId === dm.id
+                          ? "text-yellow-400 font-bold bg-yellow-400/10 shadow-[inset_0_0_20px_rgba(250,204,21,0.1)]"
+                          : "text-white/40 hover:bg-white/[0.05] hover:text-white"
+                      )}
+                    >
+                      <div className="relative">
+                        <div className={cn(
+                          "h-10 w-10 rounded-2xl flex items-center justify-center text-lg uppercase transition-all duration-500",
+                          activeChannelId === dm.id ? "bg-yellow-400/20 text-yellow-400" : "bg-white/5 text-white/40 group-hover:bg-white/10 group-hover:text-white"
+                        )}>
+                          {displayName[0]}
+                        </div>
+                      </div>
+                      <span className="italic tracking-tight truncate flex-1 text-left">{displayName}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+          )}
         </div>
 
         {/* User Footer */}

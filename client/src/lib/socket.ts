@@ -43,12 +43,12 @@ class SocketService {
     });
 
     // Channel created (DM)
-    this.socket.on('channel:created', (channel) => {
+    this.socket.on('channel:created', () => {
       useChatStore.getState().fetchChannels();
     });
 
     // New member joined channel
-    this.socket.on('channel:member_joined', ({ channelId, member }) => {
+    this.socket.on('channel:member_joined', () => {
       useChatStore.getState().fetchChannels(); // Refresh channel members
     });
 

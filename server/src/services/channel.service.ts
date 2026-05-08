@@ -37,6 +37,7 @@ export class ChannelService {
           create: memberIds.map((userId) => ({
             userId,
             role: userId === createdBy ? 'admin' : 'member',
+            status: type === 'direct' && userId !== createdBy ? 'pending' : 'accepted',
           })),
         },
       },
@@ -139,5 +140,38 @@ export class ChannelService {
       },
     });
   }
-}
+  static async acceptRequest(channelId: string, userId: string) {
+    const member = await prisma.channelMember.findUnique({
+      where: { channelId_userId: { channelId, userId } },
+    });
+    if (!member) throw new AppError('Not a member of this channel', 404);
+    
+    await prisma.channelMember.update({
+      where: { channelId_userId: { channelId, userId } },
+      data: { status: 'accepted' },
+    });
+    
+    return this.getUserChannels(userId).then(channels => channels.find(c => c.id === channelId));
+  }
 
+  static async declineRequest(channelId: string, userId: string) {
+    const member = await prisma.channelMember.findUnique({
+      where: { channelId_userId: { channelId, userId } },
+    });
+    if (!member) throw new AppError('Not a member of this channel', 404);
+
+    const channel = await prisma.channel.findUnique({ where: { id: channelId }, include: { members: true } });
+    if (!channel) throw new AppError('Channel not found', 404);
+
+    await prisma.channelMember.delete({
+      where: { channelId_userId: { channelId, userId } },
+    });
+
+    if (channel.type === 'direct') {
+      // If one declines a DM, delete the whole DM channel
+      await prisma.channel.delete({ where: { id: channelId } });
+    }
+    
+    return { success: true };
+  }
+}

@@ -45,6 +45,7 @@ model ChannelMember {
   channelId String   @map("channel_id")
   userId    String   @map("user_id")
   role      String   @default("member")
+  status    String   @default("accepted")
   joinedAt  DateTime @default(now()) @map("joined_at")
   channel   Channel  @relation(fields: [channelId], references: [id], onDelete: Cascade)
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)

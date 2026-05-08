@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import Sidebar from '../../components/Sidebar';
-import { Send, Hash, MoreVertical, Bell, Search, Sparkles, Ghost, Menu, Trash2, Edit3, Reply, Smile, ChevronUp, X, Check, Shield, ShieldCheck } from 'lucide-react';
+import { Send, Hash, MoreVertical, Bell, Search, Sparkles, Ghost, Menu, Trash2, Reply, Smile, ChevronUp, X, Shield, ShieldCheck } from 'lucide-react';
 import { Button } from '../../components/Button';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useChatStore, type Message } from '../../stores/chatStore';
@@ -172,6 +172,9 @@ export default function ChatLayout() {
   };
 
   const handleSendMessage = async () => {
+    const text = messageText.trim();
+    if (!text || !activeChannelId || !activeChannel || !user) return;
+
     setMessageText('');
     setReplyTo(null);
     socketService.stopTyping(activeChannelId);
@@ -246,6 +249,8 @@ export default function ChatLayout() {
     });
     return map;
   };
+
+  const isPendingRequest = activeChannel?.type === 'direct' && activeChannel.members?.find(m => m.user.id === user?.id)?.status === 'pending';
 
   return (
     <div className="flex h-screen bg-[#050505] overflow-hidden selection:bg-accent/30 font-mono">
@@ -502,49 +507,60 @@ export default function ChatLayout() {
             )}
           </AnimatePresence>
 
-          {/* Edit bar */}
-          <AnimatePresence>
-            {editingMessage && (
-              <motion.div
-                initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }}
-                className="max-w-4xl mx-auto mb-2 flex items-center gap-3 bg-accent/10 border border-accent/20 rounded-xl px-4 py-2"
-              >
-                <Edit3 size={14} className="text-accent flex-shrink-0" />
-                <span className="text-xs text-white/50 flex-1">Editing message</span>
-                <button onClick={() => { setEditingMessage(null); setEditText(''); }} className="text-white/30 hover:text-white"><X size={14} /></button>
+          {/* Pending Request Banner OR Input */}
+          {isPendingRequest ? (
+            <motion.div className="max-w-4xl mx-auto glass-panel border border-yellow-500/20 rounded-3xl p-6 relative flex flex-col items-center justify-center text-center">
+              <Ghost size={32} className="text-yellow-500/50 mb-3" />
+              <h3 className="text-white font-display italic text-lg mb-1">Incoming Apparition</h3>
+              <p className="text-white/40 text-sm mb-6 max-w-sm">
+                This entity wants to connect with you. Accepting will allow them to see when you've read their messages and when you're active.
+              </p>
+              <div className="flex items-center gap-3 w-full sm:w-auto">
+                <Button onClick={async () => {
+                  if (activeChannelId) await useChatStore.getState().declineRequest(activeChannelId);
+                }} variant="outline" className="flex-1 sm:flex-none w-32 border-red-500/20 text-red-400 hover:bg-red-500/10">
+                  Decline
+                </Button>
+                <Button onClick={async () => {
+                  if (activeChannelId) await useChatStore.getState().acceptRequest(activeChannelId);
+                }} variant="accent" className="flex-1 sm:flex-none w-32 shadow-[0_0_15px_rgba(16,185,129,0.2)]">
+                  Accept
+                </Button>
+              </div>
+            </motion.div>
+          ) : (
+            <>
+              <motion.div className="max-w-4xl mx-auto glass-panel rounded-3xl p-2 lg:p-3 relative">
+                <div className="absolute -top-1 -right-1 text-accent/20 animate-pulse"><Sparkles size={32} /></div>
+                <div className="flex items-end gap-2">
+                  <textarea
+                    ref={textareaRef}
+                    value={messageText}
+                    onChange={handleTextChange}
+                    onKeyDown={handleKeyDown}
+                    placeholder="Broadcast your thoughts..."
+                    className="flex-1 bg-transparent border-none focus:ring-0 text-sm text-white placeholder:text-white/20 py-3.5 resize-none min-h-[52px] max-h-[150px] overflow-y-auto font-medium ml-2"
+                    rows={1}
+                  />
+                  <Button
+                    onClick={handleSendMessage}
+                    size="icon"
+                    variant="accent"
+                    className="rounded-xl h-12 w-12 flex-shrink-0 border-none shadow-[0_0_15px_rgba(16,185,129,0.2)] hover:shadow-[0_0_25px_rgba(16,185,129,0.4)]"
+                    disabled={!messageText.trim()}
+                  >
+                    <Send className="h-5 w-5" />
+                  </Button>
+                </div>
               </motion.div>
-            )}
-          </AnimatePresence>
-
-          <motion.div className="max-w-4xl mx-auto glass-panel rounded-3xl p-2 lg:p-3 relative">
-            <div className="absolute -top-1 -right-1 text-accent/20 animate-pulse"><Sparkles size={32} /></div>
-            <div className="flex items-end gap-2">
-              <textarea
-                ref={textareaRef}
-                value={editingMessage ? editText : messageText}
-                onChange={editingMessage ? (e) => setEditText(e.target.value) : handleTextChange}
-                onKeyDown={handleKeyDown}
-                placeholder={editingMessage ? "Edit your message..." : "Broadcast your thoughts..."}
-                className="flex-1 bg-transparent border-none focus:ring-0 text-sm text-white placeholder:text-white/20 py-3.5 resize-none min-h-[52px] max-h-[150px] overflow-y-auto font-medium ml-2"
-                rows={1}
-              />
-              <Button
-                onClick={handleSendMessage}
-                size="icon"
-                variant={editingMessage ? "default" : "accent"}
-                className="rounded-xl h-12 w-12 flex-shrink-0 border-none shadow-[0_0_15px_rgba(16,185,129,0.2)] hover:shadow-[0_0_25px_rgba(16,185,129,0.4)]"
-                disabled={!(editingMessage ? editText.trim() : messageText.trim())}
-              >
-                {editingMessage ? <Check className="h-5 w-5" /> : <Send className="h-5 w-5" />}
-              </Button>
-            </div>
-          </motion.div>
-          <div className="max-w-4xl mx-auto flex justify-between px-6 mt-3">
-            <span className="text-[9px] font-bold uppercase tracking-[0.3em]" style={{ color: sessionReady ? 'rgba(52,211,153,0.4)' : 'rgba(255,255,255,0.1)' }}>
-              {sessionReady ? '⚡ ECDH Forward Secrecy Active' : '🔒 RSA Encrypted'}
-            </span>
-            <span className="text-[9px] font-bold text-white/10 uppercase tracking-[0.3em]">Shift + Enter for new line</span>
-          </div>
+              <div className="max-w-4xl mx-auto flex justify-between px-6 mt-3">
+                <span className="text-[9px] font-bold uppercase tracking-[0.3em]" style={{ color: sessionReady ? 'rgba(52,211,153,0.4)' : 'rgba(255,255,255,0.1)' }}>
+                  {sessionReady ? '⚡ ECDH Forward Secrecy Active' : '🔒 RSA Encrypted'}
+                </span>
+                <span className="text-[9px] font-bold text-white/10 uppercase tracking-[0.3em]">Shift + Enter for new line</span>
+              </div>
+            </>
+          )}
         </div>
 
         {/* Context Menu */}
@@ -565,15 +581,9 @@ export default function ChatLayout() {
                 <Sparkles size={14} /> Copy text
               </button>
               {contextMenu.message.senderId === user?.id && (
-                <>
-                  <button onClick={() => handleStartEdit(contextMenu.message)} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors">
-                    <Edit3 size={14} /> Edit
-                  </button>
-                  <div className="h-px bg-white/5 my-1" />
-                  <button onClick={() => handleDelete(contextMenu.message)} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-400 hover:bg-red-400/10 transition-colors">
-                    <Trash2 size={14} /> Delete
-                  </button>
-                </>
+                <button onClick={() => handleDelete(contextMenu.message)} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-400 hover:bg-red-400/10 transition-colors">
+                  <Trash2 size={14} /> Delete
+                </button>
               )}
             </motion.div>
           )}

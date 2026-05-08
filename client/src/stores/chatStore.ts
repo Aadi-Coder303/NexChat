@@ -16,6 +16,7 @@ export interface Channel {
   inviteCode?: string | null;
   createdById?: string | null;
   members?: {
+    status?: string;
     user: {
       id: string;
       username: string;
@@ -79,6 +80,8 @@ interface ChatState {
   createChannel: (name: string, type: 'direct' | 'group', memberIds: string[]) => Promise<void>;
   connectByCode: (code: string) => Promise<void>;
   joinByInviteCode: (code: string) => Promise<void>;
+  acceptRequest: (channelId: string) => Promise<void>;
+  declineRequest: (channelId: string) => Promise<void>;
   generateInviteCode: (channelId: string) => Promise<string>;
   leaveChannel: (channelId: string) => Promise<void>;
   reset: () => void;
@@ -173,7 +176,7 @@ export const useChatStore = create<ChatState>()(
         }));
       },
 
-      handleNewSession: (channelId, session) => {
+      handleNewSession: () => {
         // Toggle the sync state so ChatLayout's useEffect gets re-triggered
         set((state) => ({ sessionSyncToggle: !state.sessionSyncToggle }));
       },
@@ -259,6 +262,21 @@ export const useChatStore = create<ChatState>()(
         const response = await api.post('/channels/join', { code });
         set((state) => ({ channels: [response.data, ...state.channels] }));
         get().setActiveChannel(response.data.id);
+      },
+
+      acceptRequest: async (channelId) => {
+        const response = await api.post(`/channels/${channelId}/accept`);
+        set((state) => ({
+          channels: state.channels.map(c => c.id === channelId ? response.data : c)
+        }));
+      },
+
+      declineRequest: async (channelId) => {
+        await api.post(`/channels/${channelId}/decline`);
+        set((state) => ({
+          channels: state.channels.filter(c => c.id !== channelId),
+          activeChannelId: state.activeChannelId === channelId ? null : state.activeChannelId
+        }));
       },
 
       generateInviteCode: async (channelId) => {

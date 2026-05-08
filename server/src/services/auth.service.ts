@@ -32,10 +32,10 @@ export class AuthService {
       try {
         user = await prisma.user.create({
           data: {
-            username,
+            username: username.replace(/\0/g, ''),
             passwordH: hashedPassword,
             recoveryKeyH: hashedRecoveryKey,
-            publicKey,
+            publicKey: publicKey ? publicKey.replace(/\0/g, '') : undefined,
             friendCode: this.generateFriendCode(),
           },
         });

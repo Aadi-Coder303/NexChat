@@ -28,6 +28,11 @@ process.on('uncaughtException', (error) => {
 const rawOrigins = process.env.CLIENT_ORIGINS || process.env.CLIENT_ORIGIN || 'http://localhost:5173';
 const allowedOrigins = rawOrigins.split(',').map(o => o.trim()).filter(Boolean);
 
+// Bulletproof fallback: Always allow the live Vercel frontend
+if (!allowedOrigins.includes('https://nex-chat-woad.vercel.app')) {
+  allowedOrigins.push('https://nex-chat-woad.vercel.app');
+}
+
 console.log(`🔒 CORS allowlist: [${allowedOrigins.join(', ')}]`);
 
 const corsOptions: cors.CorsOptions = {

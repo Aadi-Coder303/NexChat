@@ -1,6 +1,7 @@
 import { io, Socket } from 'socket.io-client';
 import { useAuthStore } from '../stores/authStore';
 import { useChatStore } from '../stores/chatStore';
+import { CryptoEngine } from './crypto';
 
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:3000';
 
@@ -63,9 +64,15 @@ class SocketService {
     });
 
     // New session key published
-    this.socket.on('session:new', ({ channelId, session }) => {
+    this.socket.on('session:new', async ({ channelId, session }) => {
+      const { user } = useAuthStore.getState();
+      if (session.userId !== user?.id) {
+        await CryptoEngine.clearSessionKey(channelId);
+      }
       useChatStore.getState().handleNewSession(channelId, session);
-    });    // Reaction toggled
+    });
+
+    // Reaction toggled
     this.socket.on('message:reaction', ({ channelId, messageId, reactions }) => {
       useChatStore.getState().updateReactions(channelId, messageId, reactions);
     });

@@ -182,6 +182,17 @@ export class CryptoEngine {
     });
   }
 
+  /** Clear a session key for a channel. */
+  static async clearSessionKey(channelId: string): Promise<void> {
+    const db = await this.openDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction('sessions', 'readwrite');
+      const req = tx.objectStore('sessions').delete(channelId);
+      req.onsuccess = () => resolve();
+      req.onerror = () => reject(req.error);
+    });
+  }
+
   // Encrypt a message using AES-GCM with a random key (single recipient)
   static async encryptMessage(content: string, recipientPublicKeyBase64: string) {
     const encoder = new TextEncoder();

@@ -53,9 +53,10 @@ router.post('/join', async (req: any, res, next) => {
     const { code } = req.body;
     if (!code?.trim()) return res.status(400).json({ error: 'Invite code is required' });
     const channel = await ChannelService.joinByInviteCode(code.trim(), req.userId);
+    if (!channel) return res.status(404).json({ error: 'Invalid or expired invite code' });
     
     // Notify existing members that someone joined
-    const newMember = channel?.members?.find((m: any) => m.userId === req.userId);
+    const newMember = channel.members?.find((m: any) => m.userId === req.userId);
     if (newMember) {
       req.app.get('io')?.to(`channel:${channel.id}`).emit('channel:member_joined', { channelId: channel.id, member: newMember });
     }
@@ -172,19 +173,6 @@ router.delete('/:channelId/messages/:messageId', async (req: any, res, next) => 
   try {
     const { messageId } = req.params;
     const message = await MessageService.deleteMessage(messageId, req.userId);
-    res.json(message);
-  } catch (error: any) {
-    next(error);
-  }
-});
-
-// Edit a message
-router.put('/:channelId/messages/:messageId', async (req: any, res, next) => {
-  try {
-    const { messageId } = req.params;
-    const { content } = req.body;
-    if (!content?.trim()) return res.status(400).json({ error: 'Content is required' });
-    const message = await MessageService.editMessage(messageId, req.userId, content.trim());
     res.json(message);
   } catch (error: any) {
     next(error);

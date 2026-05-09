@@ -1,4 +1,4 @@
-import { LogOut, Hash, Ghost, Radio, X, Copy, Check, Link2, DoorOpen, Plus } from 'lucide-react';
+import { Hash, Ghost, Radio, X, Link2, DoorOpen, Plus } from 'lucide-react';
 import { useState } from 'react';
 import { useAuthStore } from '../stores/authStore';
 import { useChatStore } from '../stores/chatStore';
@@ -15,9 +15,8 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ activeChannelId, onChannelSelect, onClose }: SidebarProps) {
-  const { user, logout } = useAuthStore();
+  const { user } = useAuthStore();
   const { channels, unreadCounts, leaveChannel } = useChatStore();
-  const [copied, setCopied] = useState(false);
   const [addFriendOpen, setAddFriendOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [inviteModal, setInviteModal] = useState<{ channelId: string; channelName: string } | null>(null);
@@ -27,13 +26,6 @@ export default function Sidebar({ activeChannelId, onChannelSelect, onClose }: S
     await leaveChannel(channelId);
   };
 
-  const copyCode = () => {
-    if (user?.friendCode) {
-      navigator.clipboard.writeText(user.friendCode);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
-  };
 
   const groupChannels = channels.filter(c => c.type === 'group');
   const directChannels = channels.filter(c => c.type === 'direct' && c.members?.find(m => m.user.id === user?.id)?.status !== 'pending');
@@ -215,6 +207,7 @@ export default function Sidebar({ activeChannelId, onChannelSelect, onClose }: S
         {/* User Footer */}
         <div className="p-6 mt-auto">
           <button
+            data-tour="nexcode"
             onClick={() => setProfileOpen(true)}
             className="w-full glass-retro p-4 rounded-[2rem] border-white/5 flex items-center justify-between group hover:border-white/10 transition-colors"
           >

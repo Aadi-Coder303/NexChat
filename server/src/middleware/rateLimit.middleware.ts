@@ -11,14 +11,13 @@ export const globalLimiter = rateLimit({
 });
 
 // ── Auth endpoints — strict brute-force protection ─────────────────────────
-// 5 attempts per 15 minutes per IP on login, register, recover
+// 20 attempts per 15 minutes per IP on login, register, recover
 export const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 5,
+  max: 20,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Too many authentication attempts. Try again in 15 minutes.' },
-  // Add a consistent delay header so clients can back off gracefully
   handler: (req, res) => {
     res.status(429).json({
       error: 'Too many authentication attempts. Try again in 15 minutes.',

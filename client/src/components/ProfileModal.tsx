@@ -1,9 +1,8 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Copy, Check, Trash2, ShieldAlert, LogOut, Ghost, Clock, Moon } from 'lucide-react';
+import { X, Copy, Check, Trash2, ShieldAlert, LogOut, Clock, Moon } from 'lucide-react';
 import { Button } from './Button';
 import { useAuthStore } from '../stores/authStore';
-import { useChatStore } from '../stores/chatStore';
 import { socketService } from '../lib/socket';
 import api from '../lib/api';
 
@@ -14,7 +13,6 @@ interface ProfileModalProps {
 
 export default function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
   const { user, logout, deleteAccount } = useAuthStore();
-  const { reset } = useChatStore();
   const [copied, setCopied] = useState(false);
   const [loading, setLoading] = useState(false);
   const [presence, setPresence] = useState<'online' | 'idle' | 'offline'>('online');
@@ -43,8 +41,6 @@ export default function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
     try {
       await api.delete('/auth/my-messages');
       setConfirmDeleteMessages(false);
-      // Local state will update via socket or we can clear it manually if needed
-      // The socket event 'messages:bulk_deleted' handled in socket.ts calls bulkDeleteUserMessages
     } catch (error) {
       console.error('Failed to delete messages:', error);
     } finally {
@@ -90,9 +86,6 @@ export default function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
             className="fixed inset-0 flex items-center justify-center z-50 p-4 pointer-events-none"
           >
             <div className="bg-[#0c0c0c] border-2 border-white/10 rounded-[2rem] w-full max-w-md p-8 pointer-events-auto relative shadow-2xl overflow-hidden">
-              {/* Texture Overlay */}
-              <div className="absolute inset-0 bg-retro-grain opacity-[0.02] pointer-events-none" />
-
               {/* Header */}
               <div className="flex items-center justify-between mb-8 relative z-10">
                 <div className="flex items-center gap-3">
@@ -177,7 +170,6 @@ export default function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
                 <label className="text-[10px] font-bold uppercase tracking-widest text-red-500/70 ml-1">Danger Zone</label>
                 
                 <div className="space-y-2 mt-3">
-                  {/* Delete Messages */}
                   <Button
                     onClick={handleDeleteMessages}
                     disabled={loading}
@@ -190,7 +182,6 @@ export default function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
                     {confirmDeleteMessages ? 'Confirm: Delete All My Msgs' : 'Delete All My Messages'}
                   </Button>
 
-                  {/* Delete Account */}
                   <Button
                     onClick={handleDeleteAccount}
                     disabled={loading}

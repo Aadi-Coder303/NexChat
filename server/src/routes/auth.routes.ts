@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { AuthService } from '../services/auth.service';
 import { authMiddleware } from '../middleware/auth.middleware';
+import { prisma } from '../lib/prisma';
 
 const router = Router();
 
@@ -107,13 +108,46 @@ router.post('/recover', async (req, res, next) => {
 router.post('/users/:id/public-key', authMiddleware, async (req: any, res, next) => {
   try {
     const { id } = req.params;
-    // Prevent IDOR: users may only update their own public key
     if (req.userId !== id) {
       return res.status(403).json({ error: 'Forbidden: you can only update your own public key' });
     }
     const { publicKey } = req.body;
     if (!publicKey) return res.status(400).json({ error: 'publicKey is required' });
     await AuthService.updatePublicKey(id, publicKey);
+    res.json({ ok: true });
+  } catch (error: any) {
+    next(error);
+  }
+});
+
+// ── Delete all my messages everywhere (soft-delete) ──────────────────────────
+router.delete('/my-messages', authMiddleware, async (req: any, res, next) => {
+  try {
+    await prisma.message.updateMany({
+      where: { senderId: req.userId, deletedAt: null },
+      data: { deletedAt: new Date(), content: '[Message deleted]' },
+    });
+    // Broadcast so all connected clients update in real time
+    req.app.get('io')?.emit('messages:bulk_deleted', { userId: req.userId });
+    res.json({ ok: true });
+  } catch (error: any) {
+    next(error);
+  }
+});
+
+// ── Delete account (cascade removes everything) ───────────────────────────────
+router.delete('/account', authMiddleware, async (req: any, res, next) => {
+  try {
+    const userId = req.userId;
+    await prisma.reaction.deleteMany({ where: { userId } });
+    await prisma.message.updateMany({
+      where: { senderId: userId },
+      data: { deletedAt: new Date(), content: '[Account deleted]' },
+    });
+    await prisma.channelMember.deleteMany({ where: { userId } });
+    await (prisma as any).channelSession.deleteMany({ where: { userId } });
+    await prisma.user.delete({ where: { id: userId } });
+    res.clearCookie('refresh_token');
     res.json({ ok: true });
   } catch (error: any) {
     next(error);

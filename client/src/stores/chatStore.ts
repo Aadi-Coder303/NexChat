@@ -57,7 +57,7 @@ interface ChatState {
   channels: Channel[];
   activeChannelId: string | null;
   messages: Record<string, Message[]>;
-  onlineUsers: Record<string, 'online' | 'offline'>;
+  onlineUsers: Record<string, 'online' | 'idle' | 'offline'>;
   unreadCounts: Record<string, number>;
   typingUsers: Record<string, string[]>; // channelId -> userIds typing
   hasMoreMessages: Record<string, boolean>;
@@ -73,10 +73,11 @@ interface ChatState {
   deleteMessageLocally: (channelId: string, messageId: string, updatedMessage: Message) => void;
   updateReactions: (channelId: string, messageId: string, reactions: Reaction[]) => void;
   updateMessageId: (channelId: string, clientTempId: string, serverId: string, serverMessage?: Message) => void;
-  setOnlineStatus: (userId: string, status: 'online' | 'offline') => void;
+  setOnlineStatus: (userId: string, status: 'online' | 'idle' | 'offline') => void;
   setTyping: (channelId: string, userId: string, isTyping: boolean) => void;
   markChannelRead: (channelId: string) => void;
   incrementUnread: (channelId: string) => void;
+  bulkDeleteUserMessages: (userId: string) => void;
   createChannel: (name: string, type: 'direct' | 'group', memberIds: string[]) => Promise<void>;
   connectByCode: (code: string) => Promise<void>;
   joinByInviteCode: (code: string) => Promise<void>;
@@ -190,6 +191,18 @@ export const useChatStore = create<ChatState>()(
             ),
           },
         }));
+      },
+
+      bulkDeleteUserMessages: (userId) => {
+        set((state) => {
+          const updatedMessages = { ...state.messages };
+          Object.keys(updatedMessages).forEach((channelId) => {
+            updatedMessages[channelId] = updatedMessages[channelId].map((m) =>
+              m.senderId === userId ? { ...m, deletedAt: new Date().toISOString(), content: '[Message deleted]' } : m
+            );
+          });
+          return { messages: updatedMessages };
+        });
       },
 
       updateReactions: (channelId, messageId, reactions) => {

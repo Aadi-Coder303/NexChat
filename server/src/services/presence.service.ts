@@ -1,54 +1,58 @@
 import redisClient from '../lib/redis';
 
+export type PresenceStatus = 'online' | 'idle' | 'offline';
+
 export class PresenceService {
   private static PRESENCE_PREFIX = 'presence:';
-  private static TTL = 35; // 35 seconds
+  private static ONLINE_TTL  = 35;   // 35 seconds (heartbeat keeps it alive)
+  private static IDLE_TTL    = 3600; // 1 hour (manual idle mode)
 
-  static async setOnline(userId: string) {
+  static async setStatus(userId: string, status: PresenceStatus) {
     try {
       const key = `${this.PRESENCE_PREFIX}${userId}`;
-      await redisClient.set(key, 'online', { EX: this.TTL });
+      if (status === 'offline') {
+        await redisClient.del(key);
+      } else {
+        const ttl = status === 'idle' ? this.IDLE_TTL : this.ONLINE_TTL;
+        await redisClient.set(key, status, { EX: ttl });
+      }
     } catch (error) {
-      console.error(`[Presence] Error setting online for ${userId}:`, error);
+      console.error(`[Presence] Error setting status for ${userId}:`, error);
     }
+  }
+
+  static async setOnline(userId: string) {
+    return this.setStatus(userId, 'online');
   }
 
   static async setOffline(userId: string) {
-    try {
-      const key = `${this.PRESENCE_PREFIX}${userId}`;
-      await redisClient.del(key);
-    } catch (error) {
-      console.error(`[Presence] Error setting offline for ${userId}:`, error);
-    }
+    return this.setStatus(userId, 'offline');
   }
 
-  static async getStatus(userId: string): Promise<'online' | 'offline'> {
+  static async getStatus(userId: string): Promise<PresenceStatus> {
     try {
       const key = `${this.PRESENCE_PREFIX}${userId}`;
       const status = await redisClient.get(key);
-      return status === 'online' ? 'online' : 'offline';
+      if (status === 'online' || status === 'idle') return status;
+      return 'offline';
     } catch (error) {
       console.error(`[Presence] Error getting status for ${userId}:`, error);
-      return 'offline'; // Fallback to offline if redis is down
+      return 'offline';
     }
   }
 
-  static async getOnlineUsers(userIds: string[]): Promise<Record<string, 'online' | 'offline'>> {
-    const results: Record<string, 'online' | 'offline'> = {};
-    
+  static async getOnlineUsers(userIds: string[]): Promise<Record<string, PresenceStatus>> {
+    const results: Record<string, PresenceStatus> = {};
     try {
-      // Use pipeline/multi for efficiency if many users
       for (const id of userIds) {
         results[id] = await this.getStatus(id);
       }
     } catch (error) {
       console.error('[Presence] Error getting online users:', error);
-      // Fill with offline if everything fails
       for (const id of userIds) {
         results[id] = 'offline';
       }
     }
-    
     return results;
   }
 }

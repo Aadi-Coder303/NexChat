@@ -18,6 +18,7 @@ interface AuthState {
   register: (username: string, password: string, publicKey?: string) => Promise<{ recoveryKey: string }>;
   recoverAccount: (username: string, recoveryKey: string, newPassword: string) => Promise<void>;
   logout: () => Promise<void>;
+  deleteAccount: () => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -47,6 +48,12 @@ export const useAuthStore = create<AuthState>()(
       logout: async () => {
         try { await api.post('/auth/logout'); } catch { /* ignore */ }
         // Clear all chat state so another user doesn't see stale data
+        useChatStore.getState().reset();
+        set({ user: null, accessToken: null });
+      },
+
+      deleteAccount: async () => {
+        await api.delete('/auth/account');
         useChatStore.getState().reset();
         set({ user: null, accessToken: null });
       },

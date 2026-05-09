@@ -6,6 +6,7 @@ import { cn } from '../lib/utils';
 import { motion } from 'framer-motion';
 import AddFriendModal from './AddFriendModal';
 import InviteCodeModal from './InviteCodeModal';
+import ProfileModal from './ProfileModal';
 
 interface SidebarProps {
   activeChannelId?: string;
@@ -18,6 +19,7 @@ export default function Sidebar({ activeChannelId, onChannelSelect, onClose }: S
   const { channels, unreadCounts, leaveChannel } = useChatStore();
   const [copied, setCopied] = useState(false);
   const [addFriendOpen, setAddFriendOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
   const [inviteModal, setInviteModal] = useState<{ channelId: string; channelName: string } | null>(null);
 
   const handleLeave = async (channelId: string) => {
@@ -49,6 +51,7 @@ export default function Sidebar({ activeChannelId, onChannelSelect, onClose }: S
           </h1>
           <div className="flex items-center gap-2">
             <button
+              data-tour="add-btn"
               onClick={() => setAddFriendOpen(true)}
               className="p-2 rounded-xl bg-primary/20 text-primary hover:bg-primary hover:text-black transition-all shadow-[0_0_15px_rgba(139,92,246,0.3)] hover:shadow-[0_0_25px_rgba(139,92,246,0.5)]"
               title="New Connection"
@@ -67,7 +70,7 @@ export default function Sidebar({ activeChannelId, onChannelSelect, onClose }: S
         </div>
 
         {/* Navigation */}
-        <div className="flex-1 overflow-y-auto px-4 space-y-10 relative z-10">
+        <div data-tour="channels-list" className="flex-1 overflow-y-auto px-4 space-y-10 relative z-10">
           {/* Streams (Groups) */}
           <section className="space-y-2">
             <div className="px-4 flex items-center justify-between text-white/20 text-[10px] font-bold uppercase tracking-[0.3em] mb-4">
@@ -211,7 +214,10 @@ export default function Sidebar({ activeChannelId, onChannelSelect, onClose }: S
 
         {/* User Footer */}
         <div className="p-6 mt-auto">
-          <div className="glass-retro p-4 rounded-[2rem] border-white/5 flex items-center justify-between group">
+          <button
+            onClick={() => setProfileOpen(true)}
+            className="w-full glass-retro p-4 rounded-[2rem] border-white/5 flex items-center justify-between group hover:border-white/10 transition-colors"
+          >
             <div className="flex items-center gap-4">
               <div className="relative">
                 <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-primary/20 to-accent/20 border border-white/10 flex items-center justify-center font-bold text-white shadow-xl">
@@ -223,24 +229,17 @@ export default function Sidebar({ activeChannelId, onChannelSelect, onClose }: S
                   className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-accent border-2 border-[#080808]"
                 />
               </div>
-              <div className="flex flex-col flex-1">
+              <div className="flex flex-col items-start">
                 <span className="text-sm font-bold text-white italic tracking-tighter">{user?.username}</span>
-                <button
-                  onClick={copyCode}
-                  className="flex items-center gap-1.5 text-[9px] font-bold text-white/20 uppercase tracking-widest hover:text-primary transition-colors group/code"
-                >
-                  {user?.friendCode}
-                  {copied ? <Check size={10} className="text-primary" /> : <Copy size={10} className="opacity-0 group-hover/code:opacity-100 transition-opacity" />}
-                </button>
+                <span className="text-[9px] font-bold text-white/20 uppercase tracking-widest group-hover:text-primary transition-colors">
+                  View Profile
+                </span>
               </div>
             </div>
-            <button
-              onClick={() => logout()}
-              className="p-2 rounded-xl bg-white/5 text-white/20 hover:text-red-400 hover:bg-red-400/10 transition-all opacity-0 group-hover:opacity-100"
-            >
-              <LogOut size={18} />
-            </button>
-          </div>
+            <div className="p-2 rounded-xl bg-white/5 text-white/20 group-hover:text-white transition-colors">
+              <Plus size={16} className="rotate-45" />
+            </div>
+          </button>
         </div>
       </div>
 
@@ -254,6 +253,7 @@ export default function Sidebar({ activeChannelId, onChannelSelect, onClose }: S
           channelName={inviteModal.channelName}
         />
       )}
+      <ProfileModal isOpen={profileOpen} onClose={() => setProfileOpen(false)} />
     </>
   );
 }

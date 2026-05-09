@@ -42,14 +42,24 @@ class SocketService {
       useChatStore.getState().deleteMessageLocally(channelId, messageId, message);
     });
 
-    // Channel created (DM)
-    this.socket.on('channel:created', () => {
+    // Channel created (DM) — refresh sidebar AND join the new socket room immediately
+    // so we receive messages sent before we re-open the app
+    this.socket.on('channel:created', (channel: { id: string }) => {
       useChatStore.getState().fetchChannels();
+      if (channel?.id) {
+        // Emit join so the server adds this socket to the channel room
+        this.socket?.emit('channel:join', { channelId: channel.id });
+      }
     });
 
     // New member joined channel
     this.socket.on('channel:member_joined', () => {
       useChatStore.getState().fetchChannels(); // Refresh channel members
+    });
+
+    // Bulk message delete (from delete-all-messages setting)
+    this.socket.on('messages:bulk_deleted', ({ userId }: { userId: string }) => {
+      useChatStore.getState().bulkDeleteUserMessages(userId);
     });
 
     // New session key published
@@ -135,6 +145,10 @@ class SocketService {
   stopTyping(channelId: string) {
     if (this.typingTimer) clearTimeout(this.typingTimer);
     this.socket?.emit('typing:stop', { channelId });
+  }
+
+  setPresence(status: 'online' | 'idle' | 'offline') {
+    this.socket?.connected && this.socket.emit('presence:set', { status });
   }
 }
 

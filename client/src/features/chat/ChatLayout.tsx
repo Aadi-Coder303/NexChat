@@ -12,6 +12,7 @@ import { cn } from '../../lib/utils';
 import SafetyNumberModal from '../../components/SafetyNumberModal';
 import ThreatModelModal from '../../components/ThreatModelModal';
 import api from '../../lib/api';
+import OnboardingTour from '../../components/OnboardingTour';
 
 const EMOJI_LIST = ['👍', '❤️', '😂', '😮', '😢', '🔥', '🎉', '👀'];
 
@@ -534,6 +535,7 @@ export default function ChatLayout() {
                 <div className="absolute -top-1 -right-1 text-accent/20 animate-pulse"><Sparkles size={32} /></div>
                 <div className="flex items-end gap-2">
                   <textarea
+                    data-tour="message-input"
                     ref={textareaRef}
                     value={messageText}
                     onChange={handleTextChange}
@@ -607,6 +609,9 @@ export default function ChatLayout() {
 
       {/* Security & Privacy Threat Model */}
       <ThreatModelModal isOpen={threatModelOpen} onClose={() => setThreatModelOpen(false)} />
+
+      {/* First-time user walkthrough */}
+      <OnboardingTour />
     </div>
   );
 }

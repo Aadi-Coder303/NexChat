@@ -2,7 +2,7 @@ import { Server, Socket } from 'socket.io';
 import { verifyAccessToken } from '../lib/jwt';
 import { prisma } from '../lib/prisma';
 import { MessageService } from '../services/message.service';
-import { PresenceService } from '../services/presence.service';
+import { PresenceService, type PresenceStatus } from '../services/presence.service';
 
 const rateLimitTracker = new Map<string, number[]>();
 
@@ -18,6 +18,7 @@ const checkRateLimit = (socketId: string) => {
   }
   return true;
 };
+
 export const setupSocketHandlers = (io: Server) => {
   // Auth middleware
   io.use((socket, next) => {
@@ -45,7 +46,18 @@ export const setupSocketHandlers = (io: Server) => {
     });
 
     socket.on('heartbeat', async () => {
-      await PresenceService.setOnline(userId);
+      // Only refresh if not in idle/offline override mode
+      const current = await PresenceService.getStatus(userId);
+      if (current === 'online') {
+        await PresenceService.setOnline(userId);
+      }
+    });
+
+    // Manual presence override (online | idle | offline)
+    socket.on('presence:set', async ({ status }: { status: PresenceStatus }) => {
+      if (!['online', 'idle', 'offline'].includes(status)) return;
+      await PresenceService.setStatus(userId, status);
+      io.emit('presence:update', { userId, status });
     });
 
     // Also allow joining new channels dynamically if they are added

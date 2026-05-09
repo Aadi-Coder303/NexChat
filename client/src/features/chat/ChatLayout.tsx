@@ -159,6 +159,7 @@ export default function ChatLayout() {
   }, [messages, activeChannelId, user, sessionSyncToggle]);
 
   const activeMessages = activeChannelId ? (messages[activeChannelId] || []) : [];
+  const isFeedbackChannel = activeChannel?.name === 'Feedback';
   const channelTypingUsers = activeChannelId ? (typingUsers[activeChannelId] || []) : [];
   const typingUsernames = channelTypingUsers
     .filter(id => id !== user?.id)
@@ -327,165 +328,190 @@ export default function ChatLayout() {
 
         {/* Message List */}
         <div className="flex-1 overflow-y-auto p-4 lg:p-8 space-y-6 relative scroll-smooth">
-          {/* Load more */}
-          {activeChannelId && hasMoreMessages[activeChannelId] && (
-            <div className="flex justify-center">
-              <button
-                onClick={handleLoadMore}
-                disabled={isLoadingMore}
-                className="flex items-center gap-2 text-xs font-bold text-white/30 uppercase tracking-widest hover:text-primary transition-colors bg-white/5 px-4 py-2 rounded-full border border-white/10"
-              >
-                <ChevronUp size={14} className={isLoadingMore ? 'animate-bounce' : ''} />
-                {isLoadingMore ? 'Loading...' : 'Load older messages'}
-              </button>
-            </div>
-          )}
+          {isFeedbackChannel ? (
+            <div className="space-y-4 max-w-4xl mx-auto">
+              <div className="glass-panel p-6 rounded-2xl border-white/5 bg-white/5 mb-6">
+                <h3 className="text-xl font-display text-white italic mb-2">Feedback & Suggestions</h3>
+                <p className="text-white/60 text-sm">Please post your feedback, suggestions, or bug reports here. This is a public space for everyone to see and discuss.</p>
+              </div>
 
-          <AnimatePresence initial={false}>
-            {activeMessages.map((msg) => {
-              const isOwnMessage = msg.senderId === user?.id;
-              const displayContent = getMessageContent(msg);
-              const time = new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-              const groupedReactions = groupReactions(msg.reactions);
-
-              return (
-                <motion.div
-                  key={msg.id}
-                  initial={{ opacity: 0, y: 20, filter: 'blur(10px)' }}
-                  animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-                  transition={{ type: 'spring', stiffness: 100, delay: 0.03 }}
-                  className="flex gap-4 group max-w-4xl mx-auto relative"
-                  onContextMenu={(e) => !msg.deletedAt && handleContextMenu(e, msg)}
-                >
-                  {/* Avatar */}
-                  <div className="h-10 w-10 rounded-[1.25rem] bg-white/5 border border-white/10 flex items-center justify-center text-xl shadow-xl flex-shrink-0 group-hover:border-primary/50 transition-colors text-white">
-                    {msg.sender.username.charAt(0).toUpperCase()}
-                  </div>
-
-                  <div className="flex flex-col flex-1 min-w-0">
-                    <div className="flex items-baseline gap-3 mb-1">
-                      <span className="font-display text-sm text-primary italic lowercase tracking-tight">{msg.sender.username}</span>
-                      <span className="text-[9px] font-bold text-white/20 uppercase tracking-widest">{time}</span>
+              {activeMessages.map((msg) => (
+                <div key={msg.id} className="glass-panel p-5 rounded-2xl border-white/5 bg-white/5 hover:border-white/10 transition-colors">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="h-8 w-8 rounded-full bg-accent/20 flex items-center justify-center text-accent text-sm font-bold">
+                      {msg.sender.username.charAt(0).toUpperCase()}
                     </div>
+                    <div>
+                      <div className="font-display text-sm text-white italic">{msg.sender.username}</div>
+                      <div className="text-[10px] text-white/30 uppercase tracking-widest">{new Date(msg.createdAt).toLocaleDateString()}</div>
+                    </div>
+                  </div>
+                  <p className="text-sm text-white/80 leading-relaxed">{msg.content}</p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <>
+              {/* Load more */}
+              {activeChannelId && hasMoreMessages[activeChannelId] && (
+                <div className="flex justify-center">
+                  <button
+                    onClick={handleLoadMore}
+                    disabled={isLoadingMore}
+                    className="flex items-center gap-2 text-xs font-bold text-white/30 uppercase tracking-widest hover:text-primary transition-colors bg-white/5 px-4 py-2 rounded-full border border-white/10"
+                  >
+                    <ChevronUp size={14} className={isLoadingMore ? 'animate-bounce' : ''} />
+                    {isLoadingMore ? 'Loading...' : 'Load older messages'}
+                  </button>
+                </div>
+              )}
 
-                    {/* Reply-to preview */}
-                    {msg.replyTo && !msg.deletedAt && (
-                      <div className="mb-1 pl-3 border-l-2 border-primary/40 text-xs text-white/40 italic truncate">
-                        <span className="text-primary/60 font-bold">{msg.replyTo.sender.username}: </span>
-                        {msg.replyTo.deletedAt ? '[deleted]' : msg.replyTo.content.slice(0, 80)}
+              <AnimatePresence initial={false}>
+                {activeMessages.map((msg) => {
+                  const isOwnMessage = msg.senderId === user?.id;
+                  const displayContent = getMessageContent(msg);
+                  const time = new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                  const groupedReactions = groupReactions(msg.reactions);
+
+                  return (
+                    <motion.div
+                      key={msg.id}
+                      initial={{ opacity: 0, y: 20, filter: 'blur(10px)' }}
+                      animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+                      transition={{ type: 'spring', stiffness: 100, delay: 0.03 }}
+                      className="flex gap-4 group max-w-4xl mx-auto relative"
+                      onContextMenu={(e) => !msg.deletedAt && handleContextMenu(e, msg)}
+                    >
+                      {/* Avatar */}
+                      <div className="h-10 w-10 rounded-[1.25rem] bg-white/5 border border-white/10 flex items-center justify-center text-xl shadow-xl flex-shrink-0 group-hover:border-primary/50 transition-colors text-white">
+                        {msg.sender.username.charAt(0).toUpperCase()}
                       </div>
-                    )}
 
-                    {/* Message bubble */}
-                    <div className="relative">
-                      <div className={cn(
-                        "glass-panel px-5 py-3 rounded-2xl rounded-tl-none border-white/5 group-hover:border-white/10 transition-colors shadow-lg",
-                        msg.deletedAt && "opacity-40 italic",
-                        isOwnMessage && "bg-primary/5 border-primary/20"
-                      )}>
-                        <p className="text-sm text-white/80 leading-relaxed font-medium whitespace-pre-wrap break-words">
-                          {msg.deletedAt
-                            ? '🗑️ Message deleted'
-                            : msg.isEncrypted
-                              ? (displayContent || <span className="text-white/30 animate-pulse">🔒 Decrypting...</span>)
-                              : displayContent}
-                        </p>
-                        {msg.clientTempId && <span className="absolute -bottom-4 right-0 text-[8px] text-white/20 uppercase tracking-widest">Sending...</span>}
-                      </div>
-
-                      {/* Action buttons — appear on hover */}
-                      {!msg.deletedAt && (
-                        <div className="absolute -right-2 -top-3 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-[#111] border border-white/10 rounded-xl px-2 py-1 shadow-xl">
-                          <Tooltip content="React">
-                            <button onClick={(e) => { e.stopPropagation(); setEmojiPickerFor(msg.id); }} className="p-1 hover:text-accent text-white/30 transition-colors">
-                              <Smile size={13} />
-                            </button>
-                          </Tooltip>
-                          <Tooltip content="Reply">
-                            <button onClick={() => { setReplyTo(msg); textareaRef.current?.focus(); }} className="p-1 hover:text-primary text-white/30 transition-colors">
-                              <Reply size={13} />
-                            </button>
-                          </Tooltip>
-                          {isOwnMessage && (
-                            <Tooltip content="Delete">
-                              <button onClick={() => handleDelete(msg)} className="p-1 hover:text-red-400 text-white/30 transition-colors">
-                                <Trash2 size={13} />
-                              </button>
-                            </Tooltip>
-                          )}
+                      <div className="flex flex-col flex-1 min-w-0">
+                        <div className="flex items-baseline gap-3 mb-1">
+                          <span className="font-display text-sm text-primary italic lowercase tracking-tight">{msg.sender.username}</span>
+                          <span className="text-[9px] font-bold text-white/20 uppercase tracking-widest">{time}</span>
                         </div>
-                      )}
 
-                      {/* Emoji picker popover */}
-                      <AnimatePresence>
-                        {emojiPickerFor === msg.id && (
-                          <motion.div
-                            initial={{ opacity: 0, scale: 0.8, y: 5 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.8, y: 5 }}
-                            className="absolute left-0 top-full mt-1 z-50 bg-[#111] border border-white/15 rounded-2xl px-3 py-2 flex gap-1 shadow-2xl"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            {EMOJI_LIST.map(emoji => (
-                              <button key={emoji} onClick={() => handleReact(msg, emoji)} className="text-xl hover:scale-125 transition-transform p-1">
-                                {emoji}
+                        {/* Reply-to preview */}
+                        {msg.replyTo && !msg.deletedAt && (
+                          <div className="mb-1 pl-3 border-l-2 border-primary/40 text-xs text-white/40 italic truncate">
+                            <span className="text-primary/60 font-bold">{msg.replyTo.sender.username}: </span>
+                            {msg.replyTo.deletedAt ? '[deleted]' : msg.replyTo.content.slice(0, 80)}
+                          </div>
+                        )}
+
+                        {/* Message bubble */}
+                        <div className="relative">
+                          <div className={cn(
+                            "glass-panel px-5 py-3 rounded-2xl rounded-tl-none border-white/5 group-hover:border-white/10 transition-colors shadow-lg",
+                            msg.deletedAt && "opacity-40 italic",
+                            isOwnMessage && "bg-primary/5 border-primary/20"
+                          )}>
+                            <p className="text-sm text-white/80 leading-relaxed font-medium whitespace-pre-wrap break-words">
+                              {msg.deletedAt
+                                ? '🗑️ Message deleted'
+                                : msg.isEncrypted
+                                  ? (displayContent || <span className="text-white/30 animate-pulse">🔒 Decrypting...</span>)
+                                  : displayContent}
+                            </p>
+                            {msg.clientTempId && <span className="absolute -bottom-4 right-0 text-[8px] text-white/20 uppercase tracking-widest">Sending...</span>}
+                          </div>
+
+                          {/* Action buttons — appear on hover */}
+                          {!msg.deletedAt && (
+                            <div className="absolute -right-2 -top-3 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-[#111] border border-white/10 rounded-xl px-2 py-1 shadow-xl">
+                              <Tooltip content="React">
+                                <button onClick={(e) => { e.stopPropagation(); setEmojiPickerFor(msg.id); }} className="p-1 hover:text-accent text-white/30 transition-colors">
+                                  <Smile size={13} />
+                                </button>
+                              </Tooltip>
+                              <Tooltip content="Reply">
+                                <button onClick={() => { setReplyTo(msg); textareaRef.current?.focus(); }} className="p-1 hover:text-primary text-white/30 transition-colors">
+                                  <Reply size={13} />
+                                </button>
+                              </Tooltip>
+                              {isOwnMessage && (
+                                <Tooltip content="Delete">
+                                  <button onClick={() => handleDelete(msg)} className="p-1 hover:text-red-400 text-white/30 transition-colors">
+                                    <Trash2 size={13} />
+                                  </button>
+                                </Tooltip>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Emoji picker popover */}
+                          <AnimatePresence>
+                            {emojiPickerFor === msg.id && (
+                              <motion.div
+                                initial={{ opacity: 0, scale: 0.8, y: 5 }}
+                                animate={{ opacity: 1, scale: 1, y: 0 }}
+                                exit={{ opacity: 0, scale: 0.8, y: 5 }}
+                                className="absolute left-0 top-full mt-1 z-50 bg-[#111] border border-white/15 rounded-2xl px-3 py-2 flex gap-1 shadow-2xl"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                {EMOJI_LIST.map(emoji => (
+                                  <button key={emoji} onClick={() => handleReact(msg, emoji)} className="text-xl hover:scale-125 transition-transform p-1">
+                                    {emoji}
+                                  </button>
+                                ))}
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </div>
+
+                        {/* Reactions */}
+                        {Object.keys(groupedReactions).length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-2">
+                            {Object.entries(groupedReactions).map(([emoji, data]) => (
+                              <button
+                                key={emoji}
+                                onClick={() => handleReact(msg, emoji)}
+                                className={cn(
+                                  "flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border transition-all",
+                                  data.hasMe
+                                    ? "bg-primary/20 border-primary/40 text-primary"
+                                    : "bg-white/5 border-white/10 text-white/50 hover:border-white/30"
+                                )}
+                                title={data.users.join(', ')}
+                              >
+                                {emoji} <span>{data.count}</span>
                               </button>
                             ))}
-                          </motion.div>
+                          </div>
                         )}
-                      </AnimatePresence>
-                    </div>
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </AnimatePresence>
 
-                    {/* Reactions */}
-                    {Object.keys(groupedReactions).length > 0 && (
-                      <div className="flex flex-wrap gap-1 mt-2">
-                        {Object.entries(groupedReactions).map(([emoji, data]) => (
-                          <button
-                            key={emoji}
-                            onClick={() => handleReact(msg, emoji)}
-                            className={cn(
-                              "flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border transition-all",
-                              data.hasMe
-                                ? "bg-primary/20 border-primary/40 text-primary"
-                                : "bg-white/5 border-white/10 text-white/50 hover:border-white/30"
-                            )}
-                            title={data.users.join(', ')}
-                          >
-                            {emoji} <span>{data.count}</span>
-                          </button>
+              {/* Typing indicator */}
+              <AnimatePresence>
+                {typingUsernames.length > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 10 }}
+                    className="flex gap-4 max-w-4xl mx-auto"
+                  >
+                    <div className="h-10 w-10 rounded-[1.25rem] bg-white/5 border border-white/10 flex items-center justify-center text-white/20 flex-shrink-0">
+                      <Ghost size={16} />
+                    </div>
+                    <div className="flex items-center gap-2 text-xs text-white/30 italic">
+                      <div className="flex gap-0.5">
+                        {[0, 1, 2].map(i => (
+                          <motion.div key={i} animate={{ y: [0, -4, 0] }} transition={{ duration: 0.6, repeat: Infinity, delay: i * 0.15 }} className="h-1.5 w-1.5 rounded-full bg-white/30" />
                         ))}
                       </div>
-                    )}
-                  </div>
-                </motion.div>
-              );
-            })}
-          </AnimatePresence>
-
-          {/* Typing indicator */}
-          <AnimatePresence>
-            {typingUsernames.length > 0 && (
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 10 }}
-                className="flex gap-4 max-w-4xl mx-auto"
-              >
-                <div className="h-10 w-10 rounded-[1.25rem] bg-white/5 border border-white/10 flex items-center justify-center text-white/20 flex-shrink-0">
-                  <Ghost size={16} />
-                </div>
-                <div className="flex items-center gap-2 text-xs text-white/30 italic">
-                  <div className="flex gap-0.5">
-                    {[0, 1, 2].map(i => (
-                      <motion.div key={i} animate={{ y: [0, -4, 0] }} transition={{ duration: 0.6, repeat: Infinity, delay: i * 0.15 }} className="h-1.5 w-1.5 rounded-full bg-white/30" />
-                    ))}
-                  </div>
-                  <span>{typingUsernames.join(', ')} {typingUsernames.length === 1 ? 'is' : 'are'} typing…</span>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
+                      <span>{typingUsernames.join(', ')} {typingUsernames.length === 1 ? 'is' : 'are'} typing…</span>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </>
+          )}
           <div ref={messagesEndRef} className="h-4" />
         </div>
 
@@ -529,6 +555,35 @@ export default function ChatLayout() {
                 </Button>
               </div>
             </motion.div>
+          ) : isFeedbackChannel ? (
+            <>
+              <motion.div className="max-w-4xl mx-auto glass-panel rounded-3xl p-2 lg:p-3 relative">
+                <div className="flex items-end gap-2">
+                  <textarea
+                    ref={textareaRef}
+                    value={messageText}
+                    onChange={handleTextChange}
+                    onKeyDown={handleKeyDown}
+                    placeholder="Submit your feedback..."
+                    className="flex-1 bg-transparent border-none focus:ring-0 text-sm text-white placeholder:text-white/20 py-3.5 resize-none min-h-[52px] max-h-[150px] overflow-y-auto font-medium ml-2"
+                    rows={1}
+                  />
+                  <Button
+                    onClick={handleSendMessage}
+                    size="icon"
+                    variant="accent"
+                    className="rounded-xl h-12 w-12 flex-shrink-0 border-none shadow-[0_0_15px_rgba(16,185,129,0.2)] hover:shadow-[0_0_25px_rgba(16,185,129,0.4)]"
+                    disabled={!messageText.trim()}
+                  >
+                    <Send className="h-5 w-5" />
+                  </Button>
+                </div>
+              </motion.div>
+              <div className="max-w-4xl mx-auto flex justify-between px-6 mt-3">
+                <span className="text-[9px] font-bold text-white/30 uppercase tracking-[0.3em]">Your feedback is public</span>
+                <span className="text-[9px] font-bold text-white/10 uppercase tracking-[0.3em]">Shift + Enter for new line</span>
+              </div>
+            </>
           ) : (
             <>
               <motion.div className="max-w-4xl mx-auto glass-panel rounded-3xl p-2 lg:p-3 relative">

@@ -58,6 +58,25 @@ export class AuthService {
       throw new AppError('Failed to create user', 500);
     }
 
+    // Add to global channels if they exist
+    const globalChannels = await prisma.channel.findMany({
+      where: {
+        name: { in: ['Open Chat', 'Feedback'] },
+        type: 'group'
+      }
+    });
+
+    for (const channel of globalChannels) {
+      await prisma.channelMember.create({
+        data: {
+          channelId: channel.id,
+          userId: user.id,
+          role: 'member',
+          status: 'accepted',
+        },
+      });
+    }
+
     const accessToken = generateAccessToken(user.id);
     const refreshToken = generateRefreshToken(user.id);
 

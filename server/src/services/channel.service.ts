@@ -1,5 +1,6 @@
 import { prisma } from '../lib/prisma';
 import crypto from 'crypto';
+import argon2 from 'argon2';
 import { AppError } from '../utils/errors';
 
 export class ChannelService {
@@ -173,5 +174,85 @@ export class ChannelService {
     }
     
     return { success: true };
+  }
+
+  static async ensureGlobalChannel(name: string = 'Open Chat', starterMessages: string[] = [
+    'Welcome to the Open Chat! This is a public space for all users.',
+    'Feel free to say hello and start chatting!'
+  ]) {
+    // 1. Find or create system user
+    let systemUser = await prisma.user.findUnique({ where: { username: 'System' } });
+    if (!systemUser) {
+      const recoveryKey = `nex-r-system-${crypto.randomBytes(8).toString('hex')}`;
+      const hashedRecoveryKey = await argon2.hash(recoveryKey);
+      const hashedPassword = await argon2.hash(crypto.randomBytes(16).toString('hex'));
+
+      systemUser = await prisma.user.create({
+        data: {
+          username: 'System',
+          passwordH: hashedPassword,
+          recoveryKeyH: hashedRecoveryKey,
+          friendCode: crypto.randomBytes(4).toString('hex').substring(0, 7).toUpperCase(),
+        },
+      });
+    }
+
+    // 2. Check if global channel exists
+    let channel = await prisma.channel.findFirst({
+      where: { name, type: 'group' },
+    });
+
+    const allUsers = await prisma.user.findMany({ select: { id: true } });
+    const allUserIds = allUsers.map((u) => u.id);
+
+    if (!channel) {
+      // Create it
+      channel = await prisma.channel.create({
+        data: {
+          name,
+          type: 'group',
+          createdById: systemUser.id,
+          members: {
+            create: allUserIds.map((userId) => ({
+              userId,
+              role: 'member',
+              status: 'accepted',
+            })),
+          },
+        },
+      });
+
+      // Send starter messages
+      for (const content of starterMessages) {
+        await prisma.message.create({
+          data: {
+            channelId: channel.id,
+            senderId: systemUser.id,
+            content,
+          },
+        });
+      }
+    } else {
+      // Ensure all users are members
+      const existingMembers = await prisma.channelMember.findMany({
+        where: { channelId: channel.id },
+        select: { userId: true },
+      });
+      const existingMemberIds = existingMembers.map((m) => m.userId);
+      const missingUserIds = allUserIds.filter((id) => !existingMemberIds.includes(id));
+
+      if (missingUserIds.length > 0) {
+        await prisma.channelMember.createMany({
+          data: missingUserIds.map((userId) => ({
+            channelId: channel.id!,
+            userId,
+            role: 'member',
+            status: 'accepted',
+          })),
+        });
+      }
+    }
+
+    return channel;
   }
 }

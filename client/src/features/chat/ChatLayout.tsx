@@ -255,7 +255,7 @@ export default function ChatLayout() {
   const isPendingRequest = activeChannel?.type === 'direct' && activeChannel.members?.find(m => m.user.id === user?.id)?.status === 'pending';
 
   return (
-    <div className="flex h-screen bg-[#050505] overflow-hidden selection:bg-accent/30 font-mono">
+    <div className="flex h-screen moving-gradient overflow-hidden selection:bg-accent/30 font-mono">
       {/* Sidebar */}
       <div className={cn(
         "fixed inset-y-0 left-0 z-50 transform lg:relative lg:translate-x-0 transition-transform duration-300 ease-in-out",
@@ -266,9 +266,38 @@ export default function ChatLayout() {
 
       {isSidebarOpen && <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden" onClick={() => setIsSidebarOpen(false)} />}
 
-      <main className="flex-1 flex flex-col relative min-w-0">
+      <main className="flex-1 flex flex-col relative min-w-0 dot-grid">
         <div className="absolute inset-0 opacity-[0.03] pointer-events-none">
           <img src="/retro_surreal_bg.png" className="w-full h-full object-cover grayscale" alt="" />
+        </div>
+
+        {/* Floating Orbs for living feel */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <motion.div
+            animate={{
+              y: [0, -30, 0],
+              x: [0, 15, 0],
+            }}
+            transition={{
+              duration: 12,
+              repeat: Infinity,
+              ease: "easeInOut"
+            }}
+            className="absolute top-1/4 left-1/4 w-64 h-64 bg-primary/10 rounded-full blur-3xl"
+          />
+          <motion.div
+            animate={{
+              y: [0, 40, 0],
+              x: [0, -20, 0],
+            }}
+            transition={{
+              duration: 15,
+              repeat: Infinity,
+              ease: "easeInOut",
+              delay: 2
+            }}
+            className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-accent/5 rounded-full blur-3xl"
+          />
         </div>
 
         {/* Header */}
@@ -279,7 +308,7 @@ export default function ChatLayout() {
               {activeChannel?.type === 'direct' ? <Ghost className="h-4 w-4 lg:h-5 lg:w-5 text-accent" /> : <Hash className="h-4 w-4 lg:h-5 lg:w-5 text-accent" />}
             </div>
             <div className="flex flex-col">
-              <h2 className="text-xl font-display text-white italic tracking-tighter">
+              <h2 className="text-xl font-display text-white italic tracking-tighter text-glow">
                 {activeChannel?.type === 'group' ? '#' : '@'}
                 {activeChannel?.type === 'direct' 
                   ? (activeChannel.members?.find(m => m.user.id !== user?.id)?.user.username || activeChannel.name)
@@ -336,7 +365,7 @@ export default function ChatLayout() {
               </div>
 
               {activeMessages.map((msg) => (
-                <div key={msg.id} className="glass-panel p-5 rounded-2xl border-white/5 bg-white/5 hover:border-white/10 transition-colors">
+                <div key={msg.id} className="glass-panel p-5 rounded-2xl border-white/5 bg-white/5 hover:border-primary/30 hover:shadow-[0_0_15px_rgba(139,92,246,0.1)] transition-all duration-300">
                   <div className="flex items-center gap-3 mb-3">
                     <div className="h-8 w-8 rounded-full bg-accent/20 flex items-center justify-center text-accent text-sm font-bold">
                       {msg.sender.username.charAt(0).toUpperCase()}
@@ -404,9 +433,9 @@ export default function ChatLayout() {
                         {/* Message bubble */}
                         <div className="relative">
                           <div className={cn(
-                            "glass-panel px-5 py-3 rounded-2xl rounded-tl-none border-white/5 group-hover:border-white/10 transition-colors shadow-lg",
+                            "glass-panel px-5 py-3 rounded-2xl rounded-tl-none border-white/5 group-hover:border-primary/30 transition-all duration-300 shadow-lg",
                             msg.deletedAt && "opacity-40 italic",
-                            isOwnMessage && "bg-primary/5 border-primary/20"
+                            isOwnMessage && "bg-primary/10 border-primary/20 group-hover:border-primary/40 group-hover:shadow-[0_0_15px_rgba(139,92,246,0.1)]"
                           )}>
                             <p className="text-sm text-white/80 leading-relaxed font-medium whitespace-pre-wrap break-words">
                               {msg.deletedAt
@@ -586,7 +615,7 @@ export default function ChatLayout() {
             </>
           ) : (
             <>
-              <motion.div className="max-w-4xl mx-auto glass-panel rounded-3xl p-2 lg:p-3 relative">
+              <motion.div className="max-w-4xl mx-auto glass-panel rounded-3xl p-2 lg:p-3 relative focus-within:border-primary/50 focus-within:shadow-[0_0_20px_rgba(139,92,246,0.2)] transition-all duration-300">
                 <div className="absolute -top-1 -right-1 text-accent/20 animate-pulse"><Sparkles size={32} /></div>
                 <div className="flex items-end gap-2">
                   <textarea

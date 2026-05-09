@@ -181,6 +181,11 @@ export default function ChatLayout() {
     setReplyTo(null);
     socketService.stopTyping(activeChannelId);
 
+    if (activeChannel?.name === 'Feedback') {
+      socketService.sendMessage(activeChannelId, text, undefined, replyTo?.id);
+      return;
+    }
+
     try {
       // Prefer ECDH session key (forward secrecy) over RSA key wrapping
       const sessionKey = await CryptoEngine.getSessionKey(activeChannelId);
@@ -375,7 +380,11 @@ export default function ChatLayout() {
                       <div className="text-[10px] text-white/30 uppercase tracking-widest">{new Date(msg.createdAt).toLocaleDateString()}</div>
                     </div>
                   </div>
-                  <p className="text-sm text-white/80 leading-relaxed">{msg.content}</p>
+                  <p className="text-sm text-white/80 leading-relaxed">
+                    {msg.isEncrypted
+                      ? (getMessageContent(msg) || <span className="text-white/30 animate-pulse">🔒 Decrypting...</span>)
+                      : msg.content}
+                  </p>
                 </div>
               ))}
             </div>

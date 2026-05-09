@@ -235,7 +235,7 @@ export class ChannelService {
     } else {
       // Ensure all users are members
       const existingMembers = await prisma.channelMember.findMany({
-        where: { channelId: channel.id },
+        where: { channelId: channel!.id },
         select: { userId: true },
       });
       const existingMemberIds = existingMembers.map((m) => m.userId);
@@ -244,7 +244,7 @@ export class ChannelService {
       if (missingUserIds.length > 0) {
         await prisma.channelMember.createMany({
           data: missingUserIds.map((userId) => ({
-            channelId: channel.id!,
+            channelId: channel!.id,
             userId,
             role: 'member',
             status: 'accepted',

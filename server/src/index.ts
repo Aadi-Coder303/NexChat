@@ -23,14 +23,14 @@ process.on('uncaughtException', (error) => {
 });
 
 // ── CORS allowlist ──────────────────────────────────────────────────────────
-// Parse comma-separated origins from env: CLIENT_ORIGINS="https://nexchat.vercel.app,http://localhost:5173"
+// Parse comma-separated origins from env: CLIENT_ORIGINS="https://theordinarydiet.vercel.app,http://localhost:5173"
 // Fall back to single CLIENT_ORIGIN for backward compat.
 const rawOrigins = process.env.CLIENT_ORIGINS || process.env.CLIENT_ORIGIN || 'http://localhost:5173';
 const allowedOrigins = rawOrigins.split(',').map(o => o.trim()).filter(Boolean);
 
 // Bulletproof fallback: Always allow the live Vercel frontend
-if (!allowedOrigins.includes('https://nex-chat-woad.vercel.app')) {
-  allowedOrigins.push('https://nex-chat-woad.vercel.app');
+if (!allowedOrigins.includes('https://theordinarydiet.vercel.app')) {
+  allowedOrigins.push('https://theordinarydiet.vercel.app');
 }
 
 console.log(`🔒 CORS allowlist: [${allowedOrigins.join(', ')}]`);

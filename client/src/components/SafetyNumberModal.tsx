@@ -189,7 +189,7 @@ export default function SafetyNumberModal({
               {/* Footer note */}
               <p className="text-[10px] text-white/20 text-center mt-4 leading-relaxed">
                 Safety numbers are computed locally from cryptographic public keys.<br />
-                NexChat never sees this value.
+                The ordinary Diet never sees this value.
               </p>
             </div>
           </motion.div>

@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import { prisma } from '../lib/prisma';
 import { generateAccessToken, generateRefreshToken } from '../lib/jwt';
 import { AppError } from '../utils/errors';
+import { ChannelService } from './channel.service';
 export class AuthService {
   private static generateFriendCode(): string {
     return crypto.randomBytes(4).toString('hex').substring(0, 7).toUpperCase();
@@ -81,6 +82,57 @@ export class AuthService {
     const refreshToken = generateRefreshToken(user.id);
 
     return { user, accessToken, refreshToken, recoveryKey };
+  }
+  static async deviceLogin(deviceId: string) {
+    // 1. Check if user exists with this deviceId
+    let user = await prisma.user.findUnique({
+      where: { deviceId },
+    });
+
+    if (!user) {
+      // 2. If not, create a new user
+      const adjectives = ['Silent', 'Swift', 'Bright', 'Dark', 'Cool', 'Epic', 'Wild', 'Shadow', 'Mystic', 'Iron'];
+      const nouns = ['Ghost', 'Fox', 'Hawk', 'Wolf', 'Tiger', 'Lion', 'Bear', 'Phoenix', 'Dragon', 'Eagle'];
+      
+      let username = '';
+      let isUnique = false;
+      let attempts = 0;
+      
+      while (!isUnique && attempts < 10) {
+        username = `${adjectives[Math.floor(Math.random() * adjectives.length)]}-${nouns[Math.floor(Math.random() * nouns.length)]}-${Math.floor(Math.random() * 1000)}`;
+        const existing = await prisma.user.findUnique({ where: { username } });
+        if (!existing) {
+          isUnique = true;
+        }
+        attempts++;
+      }
+      
+      if (!isUnique) {
+        throw new AppError('Failed to generate a unique username', 500);
+      }
+
+      user = await prisma.user.create({
+        data: {
+          deviceId,
+          username,
+          friendCode: crypto.randomBytes(4).toString('hex').substring(0, 7).toUpperCase(),
+        },
+      });
+
+      // Ensure global channels exist and user is added
+      try {
+        await ChannelService.ensureGlobalChannel('Open Chat');
+        await ChannelService.ensureGlobalChannel('Feedback');
+      } catch (error) {
+        console.error('[AuthService] Failed to ensure global channels:', error);
+        // Don't fail the whole login if channels fail to create
+      }
+    }
+
+    const accessToken = generateAccessToken(user.id);
+    const refreshToken = generateRefreshToken(user.id);
+
+    return { user, accessToken, refreshToken };
   }
 
   static async login(username: string, password_h: string) {

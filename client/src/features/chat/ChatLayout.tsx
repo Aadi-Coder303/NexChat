@@ -348,7 +348,7 @@ export default function ChatLayout() {
                 {activeChannel?.type === 'group' ? '#' : '@'}
                 {activeChannel?.type === 'direct' 
                   ? (activeChannel.members?.find(m => m.user.id !== user?.id)?.user.username || activeChannel.name)
-                  : (activeChannel?.name || 'void-stream')}
+                  : (activeChannel?.name || 'stream')}
               </h2>
               <div className="flex items-center gap-2">
                 <div className="h-1.5 w-1.5 rounded-full bg-accent animate-pulse" />
@@ -607,9 +607,9 @@ export default function ChatLayout() {
           {isPendingRequest ? (
             <motion.div className="max-w-4xl mx-auto glass-panel border border-yellow-500/20 rounded-3xl p-6 relative flex flex-col items-center justify-center text-center">
               <Ghost size={32} className="text-yellow-500/50 mb-3" />
-              <h3 className="text-white font-display italic text-lg mb-1">Incoming Apparition</h3>
+              <h3 className="text-white font-display italic text-lg mb-1">Incoming Request</h3>
               <p className="text-white/40 text-sm mb-6 max-w-sm">
-                This entity wants to connect with you. Accepting will allow them to see when you've read their messages and when you're active.
+                This user wants to connect with you. Accepting will allow them to see when you've read their messages and when you're active.
               </p>
               <div className="flex items-center gap-3 w-full sm:w-auto">
                 <Button onClick={async () => {

@@ -39,7 +39,7 @@ function Sidebar({ activeChannelId, onChannelSelect, onClose }: SidebarProps) {
 
         <div className="p-4 sm:p-6 lg:p-8 flex items-center justify-between relative z-10">
           <h1 className="text-xl sm:text-2xl font-display text-white italic lowercase tracking-tighter flex items-center gap-2">
-            NexChat <span className="h-2 w-2 rounded-full bg-primary animate-ping" />
+            The ordinary Diet <span className="h-2 w-2 rounded-full bg-primary animate-ping" />
           </h1>
           <div className="flex items-center gap-2">
             <button
@@ -68,7 +68,7 @@ function Sidebar({ activeChannelId, onChannelSelect, onClose }: SidebarProps) {
             <div className="px-4 flex items-center justify-between text-white/20 text-[10px] font-bold uppercase tracking-[0.3em] mb-4">
               <div className="flex items-center gap-2">
                 <Radio size={12} />
-                <span>Frequencies</span>
+                <span>Channels</span>
               </div>
             </div>
             <div className="space-y-1">
@@ -127,7 +127,7 @@ function Sidebar({ activeChannelId, onChannelSelect, onClose }: SidebarProps) {
             <div className="px-4 flex items-center justify-between text-white/20 text-[10px] font-bold uppercase tracking-[0.3em] mb-4">
               <div className="flex items-center gap-2">
                 <Ghost size={12} />
-                <span>Apparitions</span>
+                <span>Messages</span>
               </div>
             </div>
             <div className="space-y-1">

@@ -123,7 +123,7 @@ const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   const dbUrl = process.env.DATABASE_URL || '';
   const maskedUrl = dbUrl.replace(/:([^:@]+)@/, ':****@');
-  console.log(`🚀 NexChat Server running on port ${PORT}`);
+  console.log(`🚀 The ordinary Diet Server running on port ${PORT}`);
   console.log(`🔗 Database: ${maskedUrl.split('@')[1] || 'Unknown'}`);
 });
 

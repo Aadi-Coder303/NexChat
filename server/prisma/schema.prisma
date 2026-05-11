@@ -11,8 +11,7 @@ model User {
   id                 String          @id @default(uuid())
   username           String          @unique
   avatarUrl          String?         @map("avatar_url")
-  passwordH          String          @map("password_h")
-  recoveryKeyH       String          @map("recovery_key_h")
+  deviceId           String          @unique @map("device_id")
   publicKey          String?         @map("public_key")
   friendCode         String          @unique @map("friend_code")
   createdAt          DateTime        @default(now()) @map("created_at")

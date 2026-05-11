@@ -325,7 +325,7 @@ export const useChatStore = create<ChatState>()(
       }),
     }),
     {
-      name: 'nexchat-chat',
+      name: 'tod-chat',
       // Only persist channels list — messages are always re-fetched fresh
       partialize: (state) => ({ channels: state.channels }),
     }

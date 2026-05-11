@@ -48,6 +48,16 @@ export class MessageService {
     });
     if (!membership) throw new AppError('Not a member of this channel', 403);
 
+    const channel = await prisma.channel.findUnique({ where: { id: channelId } });
+    if (channel && channel.name === 'Feedback') {
+      const count = await prisma.message.count({
+        where: { channelId, senderId },
+      });
+      if (count >= 1) {
+        throw new AppError('You have reached the limit of messages you can send in the Feedback channel', 400);
+      }
+    }
+
     const message = await (prisma.message as any).create({
       data: { channelId, senderId, content, isEncrypted, encryptionData: encryptionData || {}, replyToId: replyToId || null },
       select: MESSAGE_SELECT,

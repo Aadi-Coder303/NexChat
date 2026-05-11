@@ -382,7 +382,7 @@ export class CryptoEngine {
 
   private static openDB(): Promise<IDBDatabase> {
     return new Promise((resolve, reject) => {
-      const request = indexedDB.open("NexChatCrypto", 3);
+      const request = indexedDB.open("TODCrypto", 3);
       request.onupgradeneeded = () => {
         const db = request.result;
         if (!db.objectStoreNames.contains("keys")) db.createObjectStore("keys");

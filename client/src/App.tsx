@@ -1,11 +1,6 @@
-import { lazy, Suspense } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { useAuthStore } from './stores/authStore';
 
-// Route-level code splitting — each page only loads when navigated to
-const LoginPage    = lazy(() => import('./features/auth/LoginPage'));
-const RegisterPage = lazy(() => import('./features/auth/RegisterPage'));
-const RecoverPage  = lazy(() => import('./features/auth/RecoverPage'));
 const ChatLayout   = lazy(() => import('./features/chat/ChatLayout'));
 
 // Minimal fullscreen fallback — no flash, matches background colour
@@ -16,20 +11,30 @@ const PageLoader = () => (
 );
 
 function App() {
-  const { user } = useAuthStore();
+  const { user, deviceLogin } = useAuthStore();
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const init = async () => {
+      try {
+        await deviceLogin();
+      } catch (error) {
+        console.error('Failed to auto-login:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    init();
+  }, [deviceLogin]);
+
+  if (loading) {
+    return <PageLoader />;
+  }
 
   return (
     <div className="min-h-screen bg-background text-white font-sans">
       <Suspense fallback={<PageLoader />}>
-        <Routes>
-          <Route path="/login"    element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
-          <Route path="/recover"  element={<RecoverPage />} />
-          <Route
-            path="/"
-            element={user ? <ChatLayout /> : <Navigate to="/login" />}
-          />
-        </Routes>
+        {user ? <ChatLayout /> : <div className="flex items-center justify-center min-h-screen">Failed to connect. Please refresh.</div>}
       </Suspense>
     </div>
   );

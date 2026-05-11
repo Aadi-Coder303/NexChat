@@ -20,8 +20,8 @@ const STEPS: Step[] = [
   {
     id: 'welcome',
     icon: <Ghost size={28} className="text-primary" />,
-    title: 'Welcome to NexChat',
-    body: "You've entered the void. NexChat is an end-to-end encrypted, ephemeral messaging app. Every message is encrypted before it leaves your device — not even the server can read it.",
+    title: 'Welcome to The ordinary Diet',
+    body: "The ordinary Diet is an end-to-end encrypted, ephemeral messaging app. Every message is encrypted before it leaves your device — not even the server can read it.",
     target: null,
     placement: 'center',
     accent: 'primary',

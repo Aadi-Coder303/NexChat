@@ -86,6 +86,34 @@ router.post('/login', async (req, res, next) => {
   }
 });
 
+router.post('/device-login', async (req, res, next) => {
+  try {
+    const { deviceId } = req.body;
+    if (!deviceId) return res.status(400).json({ error: 'deviceId is required' });
+    
+    const { user, accessToken, refreshToken } = await AuthService.deviceLogin(deviceId);
+
+    res.cookie('refresh_token', refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
+
+    res.json({ 
+      user: { 
+        id: user.id, 
+        username: user.username, 
+        publicKey: user.publicKey,
+        friendCode: user.friendCode
+      }, 
+      accessToken 
+    });
+  } catch (error: any) {
+    next(error);
+  }
+});
+
 router.post('/logout', (req, res) => {
   res.clearCookie('refresh_token');
   res.json({ ok: true });

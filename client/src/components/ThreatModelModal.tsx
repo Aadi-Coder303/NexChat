@@ -98,7 +98,7 @@ export default function ThreatModelModal({ isOpen, onClose }: ThreatModelProps) 
                   </div>
                   <div>
                     <h2 className="text-lg font-bold text-white italic tracking-tight">Security & Privacy Disclosure</h2>
-                    <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest">NexChat Threat Model v1</p>
+                    <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest">The ordinary Diet Threat Model v1</p>
                   </div>
                 </div>
                 <button onClick={onClose} className="p-2 rounded-xl bg-white/5 text-white/30 hover:text-white hover:bg-white/10 transition-all">
@@ -109,7 +109,7 @@ export default function ThreatModelModal({ isOpen, onClose }: ThreatModelProps) 
               {/* Intro */}
               <div className="px-8 pt-5 pb-4 flex-shrink-0">
                 <p className="text-xs text-white/40 leading-relaxed">
-                  NexChat provides end-to-end encrypted messaging. This table shows exactly what is and isn't protected —
+                  The ordinary Diet provides end-to-end encrypted messaging. This table shows exactly what is and isn't protected —
                   because honest disclosure matters more than a green lock icon.
                   <span className="text-white/60"> True E2EE only protects content. Metadata is a separate, hard problem.</span>
                 </p>
@@ -169,7 +169,7 @@ export default function ThreatModelModal({ isOpen, onClose }: ThreatModelProps) 
                 {/* Comparison */}
                 <div className="grid grid-cols-3 gap-2 mt-2">
                   {[
-                    { name: 'NexChat', items: ['Content ✓', 'FS ✓', 'Metadata ✗', 'Sealed-sender ✗'] },
+                    { name: 'The ordinary Diet', items: ['Content ✓', 'FS ✓', 'Metadata ✗', 'Sealed-sender ✗'] },
                     { name: 'Signal',  items: ['Content ✓', 'FS ✓', 'Sealed-sender ✓', 'Metadata ~'] },
                     { name: 'WhatsApp', items: ['Content ✓', 'FS ✓', 'Metadata ✗', 'Backups ✗'] },
                   ].map(app => (

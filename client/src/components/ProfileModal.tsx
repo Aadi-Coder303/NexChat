@@ -12,7 +12,7 @@ interface ProfileModalProps {
 }
 
 export default function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
-  const { user, logout, deleteAccount } = useAuthStore();
+  const { user, logout, deleteAccount, clearData } = useAuthStore();
   const [copied, setCopied] = useState(false);
   const [loading, setLoading] = useState(false);
   const [presence, setPresence] = useState<'online' | 'idle' | 'offline'>('online');
@@ -121,7 +121,7 @@ export default function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
                   </button>
                 </div>
                 <p className="text-[10px] text-white/20 mt-2 ml-1">
-                  Share this code with others to connect in the void.
+                  Share this code with others to connect.
                 </p>
               </div>
 
@@ -197,7 +197,21 @@ export default function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
               </div>
 
               {/* Logout */}
-              <div className="mt-6 pt-4 border-t border-white/5 relative z-10">
+              <div className="mt-6 pt-4 border-t border-white/5 relative z-10 space-y-2">
+                <Button
+                  onClick={() => { 
+                    if (confirm('Are you sure you want to clear all data from this device? This will create a new account on next visit.')) {
+                      clearData(); 
+                      onClose(); 
+                    }
+                  }}
+                  variant="outline"
+                  className="w-full h-11 justify-start gap-3 text-xs font-bold uppercase tracking-wider text-red-400 hover:bg-red-500/5 border-red-500/20"
+                >
+                  <Trash2 size={16} className="text-red-400" />
+                  Clear Device Data
+                </Button>
+
                 <Button
                   onClick={() => { logout(); onClose(); }}
                   variant="ghost"

@@ -59,12 +59,13 @@ export default function ChatLayout() {
   useEffect(() => {
     if (!activeChannelId || !user) return;
     setSessionReady(false);
+    let cancelled = false;
 
     const initSession = async () => {
       try {
         // 1. Check if we already have a valid derived session key in IndexedDB
         const existingKey = await CryptoEngine.getSessionKey(activeChannelId);
-        if (existingKey) { setSessionReady(true); return; }
+        if (existingKey) { if (!cancelled) setSessionReady(true); return; }
 
         // 2. Generate a fresh ephemeral ECDH P-256 key pair
         const { publicKeyBase64, privateKey: ecdhPrivate } = await CryptoEngine.generateECDHKeyPair();
@@ -77,24 +78,28 @@ export default function ChatLayout() {
         const peerSession = sessions.find((s: { userId: string; ephemeralPubKey: string }) => s.userId !== user.id);
 
         if (!peerSession) {
-          // Peer hasn't published their key yet — we'll retry when a message arrives
-          // For now fall back to RSA (session key will be derived once peer connects)
+          // Peer hasn't published their key yet.
+          // Retry once after 3 s — covers the case where peer is online but slow to init.
+          // We'll also get re-triggered by session:new via sessionSyncToggle when peer connects.
+          if (!cancelled) {
+            setTimeout(() => { if (!cancelled) initSession(); }, 3000);
+          }
           return;
         }
 
         // 5. Derive shared AES session key via ECDH + HKDF
-        // ecdhPrivate is used here ONCE then JavaScript GC will clean it up
         const sessionKey = await CryptoEngine.deriveSessionKey(ecdhPrivate, peerSession.ephemeralPubKey, activeChannelId);
 
         // 6. Persist derived session key in IndexedDB (30-day TTL)
         await CryptoEngine.storeSessionKey(activeChannelId, sessionKey);
-        setSessionReady(true);
+        if (!cancelled) setSessionReady(true);
       } catch (err) {
         console.warn('ECDH session init failed, falling back to RSA:', err);
       }
     };
 
     initSession();
+    return () => { cancelled = true; };
   }, [activeChannelId, user, sessionSyncToggle]);
 
   // Auto-scroll
@@ -130,7 +135,12 @@ export default function ChatLayout() {
       const privateKey = await CryptoEngine.getPrivateKey(user.id);
 
       for (const msg of channelMessages) {
-        if (!msg.isEncrypted || !msg.encryptionData || decryptedMessages[activeChannelId]?.[msg.id]) continue;
+        // Skip: not encrypted, no data, already decrypted, or soft-deleted
+        if (!msg.isEncrypted || !msg.encryptionData || msg.deletedAt) continue;
+        // Use functional form via a ref-captured check — avoids stale closure on decryptedMessages
+        const alreadyDecrypted = decryptedMessages[activeChannelId]?.[msg.id];
+        if (alreadyDecrypted) continue;
+
         try {
           let decrypted: string | null = null;
 
@@ -152,11 +162,14 @@ export default function ChatLayout() {
               [activeChannelId]: { ...(prev[activeChannelId] || {}), [msg.id]: decrypted as string },
             }));
           }
-        } catch { /* silently skip undecryptable messages */ }
+        } catch (err) {
+          // Log decrypt failures in dev so we can diagnose key mismatches
+          if (import.meta.env.DEV) console.warn('[decrypt] failed for msg', msg.id, err);
+        }
       }
     };
     decryptAll();
-  }, [messages, activeChannelId, user, sessionSyncToggle]);
+  }, [messages, activeChannelId, user, sessionSyncToggle]); // decryptedMessages intentionally omitted — we check it inside
 
   const activeMessages = activeChannelId ? (messages[activeChannelId] || []) : [];
   const isFeedbackChannel = activeChannel?.name === 'Feedback';

@@ -63,13 +63,16 @@ class SocketService {
       useChatStore.getState().bulkDeleteUserMessages(userId);
     });
 
-    // New session key published
+    // New session key published by a peer
     this.socket.on('session:new', async ({ channelId, session }) => {
       const { user } = useAuthStore.getState();
+      // Only act on keys published by OTHER users (not echoes of our own publish)
       if (session.userId !== user?.id) {
+        // Invalidate our cached session key so initSession re-derives from the new peer key
         await CryptoEngine.clearSessionKey(channelId);
+        // Re-trigger session negotiation in ChatLayout
+        useChatStore.getState().handleNewSession(channelId, session);
       }
-      useChatStore.getState().handleNewSession(channelId, session);
     });
 
     // Reaction toggled
@@ -112,16 +115,17 @@ class SocketService {
 
     this.socket.emit('message:send', { channelId, content, clientTempId, isEncrypted: !!encryptionData, encryptionData, replyToId });
 
-    // Optimistic UI
+    // Optimistic UI — show plaintext immediately for the sender.
+    // The server message:ack will replace this with the real encrypted message.
     const currentUser = useAuthStore.getState().user;
     if (currentUser) {
       useChatStore.getState().addMessage(channelId, {
         id: clientTempId,
-        content,
+        content,          // raw plaintext — only ever shown to sender pre-ack
         channelId,
         senderId: currentUser.id,
-        isEncrypted: !!encryptionData,
-        encryptionData,
+        isEncrypted: false,  // never try to decrypt the optimistic copy
+        encryptionData: undefined,
         replyToId: replyToId || null,
         createdAt: new Date().toISOString(),
         reactions: [],

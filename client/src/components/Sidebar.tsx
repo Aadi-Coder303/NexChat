@@ -1,5 +1,5 @@
 import { Hash, Ghost, Radio, X, Link2, DoorOpen, Plus } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useMemo, memo } from 'react';
 import { useAuthStore } from '../stores/authStore';
 import { useChatStore } from '../stores/chatStore';
 import { cn } from '../lib/utils';
@@ -14,7 +14,7 @@ interface SidebarProps {
   onClose?: () => void;
 }
 
-export default function Sidebar({ activeChannelId, onChannelSelect, onClose }: SidebarProps) {
+function Sidebar({ activeChannelId, onChannelSelect, onClose }: SidebarProps) {
   const { user } = useAuthStore();
   const { channels, unreadCounts, leaveChannel } = useChatStore();
   const [addFriendOpen, setAddFriendOpen] = useState(false);
@@ -27,9 +27,9 @@ export default function Sidebar({ activeChannelId, onChannelSelect, onClose }: S
   };
 
 
-  const groupChannels = channels.filter(c => c.type === 'group');
-  const directChannels = channels.filter(c => c.type === 'direct' && c.members?.find(m => m.user.id === user?.id)?.status !== 'pending');
-  const pendingChannels = channels.filter(c => c.type === 'direct' && c.members?.find(m => m.user.id === user?.id)?.status === 'pending');
+  const groupChannels   = useMemo(() => channels.filter(c => c.type === 'group'), [channels]);
+  const directChannels  = useMemo(() => channels.filter(c => c.type === 'direct' && c.members?.find(m => m.user.id === user?.id)?.status !== 'pending'), [channels, user?.id]);
+  const pendingChannels = useMemo(() => channels.filter(c => c.type === 'direct' && c.members?.find(m => m.user.id === user?.id)?.status === 'pending'), [channels, user?.id]);
 
   return (
     <>
@@ -250,3 +250,6 @@ export default function Sidebar({ activeChannelId, onChannelSelect, onClose }: S
     </>
   );
 }
+
+// Memo: skip re-render when messages update — Sidebar only cares about channels+unread
+export default memo(Sidebar);

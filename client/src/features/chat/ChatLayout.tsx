@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import Sidebar from '../../components/Sidebar';
 import { Send, Hash, MoreVertical, Bell, Search, Sparkles, Ghost, Menu, Trash2, Reply, Smile, ChevronUp, X, Shield, ShieldCheck } from 'lucide-react';
 import { Button } from '../../components/Button';
@@ -37,8 +37,8 @@ export default function ChatLayout() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Derived state — hoisted so useEffects can reference it
-  const activeChannel = channels.find(c => c.id === activeChannelId);
+  // Derived state — memoized so re-renders only on channels change
+  const activeChannel = useMemo(() => channels.find(c => c.id === activeChannelId), [channels, activeChannelId]);
 
   useEffect(() => {
     fetchChannels();
@@ -171,22 +171,31 @@ export default function ChatLayout() {
     decryptAll();
   }, [messages, activeChannelId, user, sessionSyncToggle]); // decryptedMessages intentionally omitted — we check it inside
 
-  const activeMessages = activeChannelId ? (messages[activeChannelId] || []) : [];
+  const activeMessages = useMemo(
+    () => activeChannelId ? (messages[activeChannelId] || []) : [],
+    [messages, activeChannelId]
+  );
   const isFeedbackChannel = activeChannel?.name === 'Feedback';
-  const channelTypingUsers = activeChannelId ? (typingUsers[activeChannelId] || []) : [];
-  const typingUsernames = channelTypingUsers
-    .filter(id => id !== user?.id)
-    .map(id => channels.flatMap(c => c.members || []).find(m => m.user.id === id)?.user.username || 'Someone');
+  const channelTypingUsers = useMemo(
+    () => activeChannelId ? (typingUsers[activeChannelId] || []) : [],
+    [typingUsers, activeChannelId]
+  );
+  const typingUsernames = useMemo(
+    () => channelTypingUsers
+      .filter(id => id !== user?.id)
+      .map(id => channels.flatMap(c => c.members || []).find(m => m.user.id === id)?.user.username || 'Someone'),
+    [channelTypingUsers, user?.id, channels]
+  );
 
-  const getMessageContent = (msg: Message) => {
-    if (msg.deletedAt) return null; // show deleted UI
+  const getMessageContent = useCallback((msg: Message) => {
+    if (msg.deletedAt) return null;
     if (msg.isEncrypted && msg.encryptionData) {
       return decryptedMessages[activeChannelId!]?.[msg.id] || null;
     }
     return msg.content;
-  };
+  }, [decryptedMessages, activeChannelId]);
 
-  const handleSendMessage = async () => {
+  const handleSendMessage = useCallback(async () => {
     const text = messageText.trim();
     if (!text || !activeChannelId || !activeChannel || !user) return;
 
@@ -225,41 +234,47 @@ export default function ChatLayout() {
     } catch {
       socketService.sendMessage(activeChannelId, text, undefined, replyTo?.id);
     }
-  };
+  }, [messageText, activeChannelId, activeChannel, user, replyTo]);
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); }
-  };
+  }, [handleSendMessage]);
 
-  const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+  const handleTextChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setMessageText(e.target.value);
     if (activeChannelId) socketService.emitTyping(activeChannelId);
-  };
+  }, [activeChannelId]);
 
-  const handleContextMenu = (e: React.MouseEvent, msg: Message) => {
+  const handleContextMenu = useCallback((e: React.MouseEvent, msg: Message) => {
     e.preventDefault();
     e.stopPropagation();
-    setContextMenu({ x: e.clientX, y: e.clientY, message: msg });
-  };
+    const isMobile = window.innerWidth < 640;
+    if (isMobile) {
+      // On mobile use a centered position instead of cursor coordinates
+      setContextMenu({ x: window.innerWidth / 2, y: window.innerHeight / 2, message: msg });
+    } else {
+      setContextMenu({ x: e.clientX, y: e.clientY, message: msg });
+    }
+  }, []);
 
-  const handleDelete = (msg: Message) => {
+  const handleDelete = useCallback((msg: Message) => {
     if (activeChannelId) socketService.deleteMessage(activeChannelId, msg.id);
     setContextMenu(null);
-  };
+  }, [activeChannelId]);
 
-  const handleReact = (msg: Message, emoji: string) => {
+  const handleReact = useCallback((msg: Message, emoji: string) => {
     if (activeChannelId) socketService.reactToMessage(activeChannelId, msg.id, emoji);
     setEmojiPickerFor(null);
-  };
+  }, [activeChannelId]);
 
-  const handleLoadMore = async () => {
+  const handleLoadMore = useCallback(async () => {
     if (!activeChannelId) return;
     setIsLoadingMore(true);
     await loadMoreMessages(activeChannelId);
     setIsLoadingMore(false);
-  };
+  }, [activeChannelId, loadMoreMessages]);
 
-  const groupReactions = (reactions: Message['reactions']) => {
+  const groupReactions = useCallback((reactions: Message['reactions']) => {
     const map: Record<string, { count: number; users: string[]; hasMe: boolean }> = {};
     (reactions || []).forEach(r => {
       if (!map[r.emoji]) map[r.emoji] = { count: 0, users: [], hasMe: false };
@@ -268,9 +283,12 @@ export default function ChatLayout() {
       if (r.userId === user?.id) map[r.emoji].hasMe = true;
     });
     return map;
-  };
+  }, [user?.id]);
 
-  const isPendingRequest = activeChannel?.type === 'direct' && activeChannel.members?.find(m => m.user.id === user?.id)?.status === 'pending';
+  const isPendingRequest = useMemo(
+    () => activeChannel?.type === 'direct' && activeChannel.members?.find(m => m.user.id === user?.id)?.status === 'pending',
+    [activeChannel, user?.id]
+  );
 
   return (
     <div className="flex h-[100dvh] moving-gradient overflow-hidden selection:bg-accent/30 font-mono">

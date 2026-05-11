@@ -34,18 +34,19 @@ h1, h2, h3, .font-display {
   @apply font-extrabold tracking-tighter;
 }
 
-/* Surreal Grain Overlay - kept but softened */
+/* Surreal Grain Overlay */
 body::before {
   content: "";
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
   background: var(--retro-grain);
   opacity: 0.03;
   pointer-events: none;
   z-index: 9999;
+  /* GPU layer — doesn't block layout */
+  will-change: opacity;
+  transform: translateZ(0);
 }
 
 /* Distorted Gradients - softened for a composed look */
@@ -56,15 +57,17 @@ body::before {
 
 /* Premium Glassmorphism */
 @keyframes breathe {
-  0% { box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5); }
-  50% { box-shadow: 0 8px 32px 8px rgba(139, 92, 246, 0.05); }
-  100% { box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5); }
+  0%, 100% { box-shadow: 0 8px 32px 0 rgba(0,0,0,0.5); }
+  50%       { box-shadow: 0 8px 32px 8px rgba(139,92,246,0.06); }
 }
 
 .glass-panel {
   @apply bg-white/[0.03] backdrop-blur-2xl border border-white/10 shadow-2xl;
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(255, 255, 255, 0.05);
-  animation: breathe 8s ease-in-out infinite;
+  box-shadow: 0 8px 32px 0 rgba(0,0,0,0.5), inset 0 0 0 1px rgba(255,255,255,0.05);
+  animation: breathe 10s ease-in-out infinite;
+  /* Promote to own GPU layer — prevents backdrop-blur repaints */
+  transform: translateZ(0);
+  backface-visibility: hidden;
 }
 
 .glass-button {
@@ -73,8 +76,8 @@ body::before {
 }
 
 .glass-input {
-  @apply bg-black/40 backdrop-blur-xl border border-white/10 focus:border-primary/50 focus:bg-black/60 transition-all duration-300;
-  box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.5);
+  @apply bg-black/40 backdrop-blur-xl border border-white/10 focus:border-primary/50 focus:bg-black/60 transition-all duration-200;
+  box-shadow: inset 0 2px 10px rgba(0,0,0,0.5);
 }
 
 /* Glowing text effects */
@@ -110,15 +113,16 @@ body::before {
 
 /* Breath-taking additions */
 @keyframes move-bg {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
   100% { background-position: 0% 50%; }
 }
 
 .moving-gradient {
   background: linear-gradient(-45deg, #050505, #12072B, #051A15, #050505);
   background-size: 400% 400%;
-  animation: move-bg 15s ease infinite;
+  animation: move-bg 25s ease infinite; /* slowed from 15s — less GPU work */
+  will-change: background-position;
 }
 
 .dot-grid {

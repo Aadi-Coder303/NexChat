@@ -103,9 +103,9 @@ export default function AddFriendModal({ isOpen, onClose }: AddFriendModalProps)
             transition={{ type: 'spring', damping: 20, stiffness: 300 }}
             className="fixed inset-0 flex items-center justify-center z-50 p-4 pointer-events-none"
           >
-            <div className="bg-[#0c0c0c] border-2 border-white/10 rounded-[2rem] w-full max-w-md p-8 pointer-events-auto relative shadow-2xl">
+            <div className="bg-[#0c0c0c] border-2 border-white/10 rounded-[2rem] w-full max-w-md p-5 sm:p-8 pointer-events-auto relative shadow-2xl">
               {/* Header */}
-              <div className="flex items-center justify-between mb-8">
+              <div className="flex items-center justify-between mb-5 sm:mb-8">
                 <div className="flex items-center gap-3">
                   <div className="h-10 w-10 rounded-xl bg-primary/20 border border-primary/30 flex items-center justify-center">
                     <UserPlus size={18} className="text-primary" />

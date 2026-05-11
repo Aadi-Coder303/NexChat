@@ -68,7 +68,7 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6 relative overflow-hidden bg-[#050505]">
+    <div className="min-h-[100dvh] flex items-center justify-center p-4 sm:p-6 relative overflow-hidden bg-[#050505]">
       {/* Surreal Background Asset */}
       <div className="absolute inset-0 z-0 opacity-40">
         <img 
@@ -85,7 +85,7 @@ export default function RegisterPage() {
         transition={{ type: 'spring', damping: 20 }}
         className="w-full max-w-md z-10"
       >
-        <div className="glass-panel p-8 rounded-[2rem] relative">
+        <div className="glass-panel p-6 sm:p-8 rounded-[2rem] relative overflow-hidden">
           <Link to="/login" className="absolute top-8 left-8 text-white/40 hover:text-white transition-colors">
             <ArrowLeft size={20} />
           </Link>
@@ -204,14 +204,14 @@ export default function RegisterPage() {
 
           {!recoveryKey && (
             <div className="flex justify-between items-center mt-8">
-              <p className="text-sm text-white/40">
+              <span className="text-sm text-white/40">
                 Already exist?{' '}
                 <Tooltip content="Sign In">
                   <Link to="/login" className="text-indigo-400 font-bold hover:text-indigo-300 hover:underline cursor-help transition-colors">
                     Return to your body
                   </Link>
                 </Tooltip>
-              </p>
+              </span>
             </div>
           )}
         </div>

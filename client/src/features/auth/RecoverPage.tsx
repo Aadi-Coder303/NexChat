@@ -41,7 +41,7 @@ export default function RecoverPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6 relative overflow-hidden bg-[#050505]">
+    <div className="min-h-[100dvh] flex items-center justify-center p-4 sm:p-6 relative overflow-hidden bg-[#050505]">
       {/* Surreal Background Asset */}
       <div className="absolute inset-0 z-0 opacity-40">
         <img 
@@ -58,7 +58,7 @@ export default function RecoverPage() {
         transition={{ type: 'spring', damping: 15 }}
         className="w-full max-w-md z-10"
       >
-        <div className="glass-retro p-8 rounded-[2rem] border-2 border-white/10 relative">
+        <div className="glass-retro p-6 sm:p-8 rounded-[2rem] border-2 border-white/10 relative overflow-hidden">
           <Link to="/login" className="absolute top-8 left-8 text-white/40 hover:text-white transition-colors">
             <ArrowLeft size={20} />
           </Link>

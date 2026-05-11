@@ -132,8 +132,26 @@ export default function OnboardingTour() {
     setActive(false);
   };
 
+  /* On narrow screens always center — sidebar targets are off-screen anyway */
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 640;
+
   /* Card position relative to spotlight */
   const getCardStyle = (): React.CSSProperties => {
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+
+    // Mobile: fixed bottom sheet, horizontally centered
+    if (isMobile) {
+      return {
+        position: 'fixed',
+        bottom: 24,
+        left: '50%',
+        transform: 'translateX(-50%)',
+        maxWidth: `calc(100vw - 2rem)`,
+        width: '100%',
+      };
+    }
+
     if (!targetRect || current.placement === 'center') {
       return {
         position: 'fixed',
@@ -143,41 +161,44 @@ export default function OnboardingTour() {
       };
     }
     const PAD = 20;
-    const vw = window.innerWidth;
-    const vh = window.innerHeight;
 
     switch (current.placement) {
       case 'right':
         return {
           position: 'fixed',
-          top: Math.min(targetRect.top, vh - 320),
-          left: Math.min(targetRect.right + PAD, vw - 380),
+          top: Math.min(targetRect.top, vh - 340),
+          left: Math.min(targetRect.right + PAD, vw - 390),
         };
       case 'left':
         return {
           position: 'fixed',
-          top: Math.min(targetRect.top, vh - 320),
-          right: Math.min(vw - targetRect.left + PAD, vw - 380),
+          top: Math.min(targetRect.top, vh - 340),
+          right: Math.min(vw - targetRect.left + PAD, vw - 390),
         };
       case 'bottom':
         return {
           position: 'fixed',
-          top: Math.min(targetRect.bottom + PAD, vh - 320),
-          left: Math.max(0, targetRect.left + targetRect.width / 2 - 175),
+          top: Math.min(targetRect.bottom + PAD, vh - 340),
+          left: Math.max(16, Math.min(targetRect.left + targetRect.width / 2 - 180, vw - 390)),
         };
       case 'top':
       default:
         return {
           position: 'fixed',
           bottom: Math.min(vh - targetRect.top + PAD, vh - 60),
-          left: Math.max(0, Math.min(targetRect.left + targetRect.width / 2 - 175, vw - 380)),
+          left: Math.max(16, Math.min(targetRect.left + targetRect.width / 2 - 180, vw - 390)),
         };
     }
   };
 
-  /* SVG clip-path for spotlight cutout */
+  /* SVG clip-path for spotlight cutout.
+     On mobile, suppress spotlight when the target is a sidebar element
+     (it's off-screen) to avoid a glowing hole outside the viewport. */
+  const sidebarTargets = ['[data-tour="nexcode"]', '[data-tour="add-btn"]', '[data-tour="channels-list"]'];
+  const suppressSpot = isMobile && current.target !== null && sidebarTargets.includes(current.target);
+
   const buildClipPath = () => {
-    if (!targetRect) return null;
+    if (!targetRect || suppressSpot) return null;
     const R = 12; // border-radius of cutout
     const P = 8;  // padding around element
     const x = targetRect.left - P;
@@ -269,11 +290,11 @@ export default function OnboardingTour() {
             exit={{ opacity: 0, scale: 0.88, y: 12 }}
             transition={{ type: 'spring', damping: 22, stiffness: 280 }}
             style={getCardStyle()}
-            className="z-[9002] w-[340px] sm:w-[360px] pointer-events-auto"
+            className="z-[9002] w-[calc(100vw-2rem)] max-w-[360px] pointer-events-auto"
             onClick={(e) => e.stopPropagation()}
           >
             <div
-              className="relative rounded-[1.75rem] p-7 shadow-2xl overflow-hidden"
+              className="relative rounded-[1.75rem] p-5 sm:p-7 shadow-2xl overflow-hidden"
               style={{
                 background: 'rgba(10,10,10,0.97)',
                 border: '1px solid rgba(255,255,255,0.1)',
@@ -317,14 +338,14 @@ export default function OnboardingTour() {
 
               {/* Title */}
               <h3
-                className="font-display text-xl text-white italic tracking-tight mb-2"
+                className="font-display text-lg sm:text-xl text-white italic tracking-tight mb-2"
                 style={{ fontFamily: "'Syne', sans-serif", fontWeight: 800 }}
               >
                 {current.title}
               </h3>
 
               {/* Body */}
-              <p className="text-sm text-white/50 leading-relaxed mb-6">
+              <p className="text-sm text-white/50 leading-relaxed mb-4 sm:mb-6">
                 {current.body}
               </p>
 
@@ -352,14 +373,14 @@ export default function OnboardingTour() {
                   {step > 0 && (
                     <button
                       onClick={prev}
-                      className="h-9 w-9 rounded-xl flex items-center justify-center text-white/30 hover:text-white hover:bg-white/5 transition-all"
+                      className="h-10 w-10 sm:h-9 sm:w-9 rounded-xl flex items-center justify-center text-white/30 hover:text-white hover:bg-white/5 transition-all"
                     >
                       <ChevronLeft size={16} />
                     </button>
                   )}
                   <button
                     onClick={next}
-                    className="flex items-center gap-2 px-5 h-9 rounded-xl text-xs font-bold uppercase tracking-wider transition-all"
+                    className="flex items-center gap-2 px-5 h-10 sm:h-9 rounded-xl text-xs font-bold uppercase tracking-wider transition-all"
                     style={{
                       background: current.accent === 'accent'
                         ? 'linear-gradient(135deg, #10B981, #059669)'
@@ -388,7 +409,7 @@ export default function OnboardingTour() {
               {/* Skip link */}
               <button
                 onClick={finish}
-                className="w-full text-center text-[9px] font-bold uppercase tracking-[0.25em] text-white/15 hover:text-white/30 transition-colors mt-4"
+                className="w-full text-center text-[9px] font-bold uppercase tracking-[0.25em] text-white/15 hover:text-white/30 transition-colors mt-3 py-2"
               >
                 Skip walkthrough
               </button>

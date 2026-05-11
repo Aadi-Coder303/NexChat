@@ -33,11 +33,11 @@ export default function Sidebar({ activeChannelId, onChannelSelect, onClose }: S
 
   return (
     <>
-      <div className="w-[280px] sm:w-80 glass-panel border-r border-white/5 h-full relative overflow-hidden flex flex-col z-40">
+      <div className="w-full max-w-[280px] sm:w-80 sm:max-w-none glass-panel border-r border-white/5 h-full relative overflow-hidden flex flex-col z-40" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
         {/* Texture Overlay */}
         <div className="absolute inset-0 bg-retro-grain opacity-[0.02] pointer-events-none" />
 
-        <div className="p-6 sm:p-8 flex items-center justify-between relative z-10">
+        <div className="p-4 sm:p-6 lg:p-8 flex items-center justify-between relative z-10">
           <h1 className="text-xl sm:text-2xl font-display text-white italic lowercase tracking-tighter flex items-center gap-2">
             NexChat <span className="h-2 w-2 rounded-full bg-primary animate-ping" />
           </h1>

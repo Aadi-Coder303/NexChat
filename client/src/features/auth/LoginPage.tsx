@@ -52,7 +52,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6 relative overflow-hidden bg-[#050505]">
+    <div className="min-h-[100dvh] flex items-center justify-center p-4 sm:p-6 relative overflow-hidden bg-[#050505]">
       {/* Surreal Background Asset */}
       <div className="absolute inset-0 z-0 opacity-40">
         <img 
@@ -69,7 +69,7 @@ export default function LoginPage() {
         transition={{ type: 'spring', damping: 20 }}
         className="w-full max-w-md z-10"
       >
-        <div className="glass-panel p-8 rounded-[2rem] relative">
+        <div className="glass-panel p-6 sm:p-8 rounded-[2rem] relative overflow-hidden">
           {/* Floating Surreal Elements */}
           <motion.div 
             animate={{ y: [0, -10, 0], rotate: [0, 5, 0] }}
@@ -148,14 +148,14 @@ export default function LoginPage() {
           </form>
 
           <div className="flex justify-between items-center mt-8">
-            <p className="text-sm text-white/40">
+            <span className="text-sm text-white/40">
               Lost your way?{' '}
               <Tooltip content="Sign Up">
                 <Link to="/register" className="text-accent font-bold hover:text-emerald-400 hover:underline cursor-help transition-colors">
                   Create a new identity
                 </Link>
               </Tooltip>
-            </p>
+            </span>
             <Tooltip content="Password Recovery">
               <Link to="/recover" className="text-sm text-primary/60 hover:text-primary transition-colors italic cursor-help">
                 Forgot Secret?

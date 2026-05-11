@@ -260,10 +260,10 @@ export default function ChatLayout() {
   const isPendingRequest = activeChannel?.type === 'direct' && activeChannel.members?.find(m => m.user.id === user?.id)?.status === 'pending';
 
   return (
-    <div className="flex h-screen moving-gradient overflow-hidden selection:bg-accent/30 font-mono">
+    <div className="flex h-[100dvh] moving-gradient overflow-hidden selection:bg-accent/30 font-mono">
       {/* Sidebar */}
       <div className={cn(
-        "fixed inset-y-0 left-0 z-50 transform lg:relative lg:translate-x-0 transition-transform duration-300 ease-in-out",
+        "fixed inset-y-0 left-0 z-50 transform lg:relative lg:translate-x-0 lg:flex lg:flex-shrink-0 transition-transform duration-300 ease-in-out",
         isSidebarOpen ? "translate-x-0" : "-translate-x-full"
       )}>
         <Sidebar activeChannelId={activeChannelId || undefined} onChannelSelect={(id) => { setActiveChannel(id); setIsSidebarOpen(false); }} onClose={() => setIsSidebarOpen(false)} />
@@ -306,14 +306,14 @@ export default function ChatLayout() {
         </div>
 
         {/* Header */}
-        <header className="h-20 flex items-center justify-between px-4 lg:px-8 border-b border-white/5 glass-panel z-30 flex-shrink-0">
-          <div className="flex items-center gap-2 lg:gap-4">
-            <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden p-2 text-white/40 hover:text-white"><Menu size={24} /></button>
-            <div className="h-8 w-8 lg:h-10 lg:w-10 bg-accent/20 rounded-full flex items-center justify-center border border-accent/30">
+        <header className="h-16 sm:h-20 flex items-center justify-between px-3 sm:px-4 lg:px-8 border-b border-white/5 glass-panel z-30 flex-shrink-0">
+          <div className="flex items-center gap-2 lg:gap-4 min-w-0">
+            <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden p-2 text-white/40 hover:text-white flex-shrink-0"><Menu size={22} /></button>
+            <div className="h-8 w-8 lg:h-10 lg:w-10 bg-accent/20 rounded-full flex items-center justify-center border border-accent/30 flex-shrink-0">
               {activeChannel?.type === 'direct' ? <Ghost className="h-4 w-4 lg:h-5 lg:w-5 text-accent" /> : <Hash className="h-4 w-4 lg:h-5 lg:w-5 text-accent" />}
             </div>
-            <div className="flex flex-col">
-              <h2 className="text-xl font-display text-white italic tracking-tighter text-glow">
+            <div className="flex flex-col min-w-0">
+              <h2 className="text-base sm:text-xl font-display text-white italic tracking-tighter text-glow truncate max-w-[120px] sm:max-w-[200px] lg:max-w-none">
                 {activeChannel?.type === 'group' ? '#' : '@'}
                 {activeChannel?.type === 'direct' 
                   ? (activeChannel.members?.find(m => m.user.id !== user?.id)?.user.username || activeChannel.name)
@@ -321,13 +321,13 @@ export default function ChatLayout() {
               </h2>
               <div className="flex items-center gap-2">
                 <div className="h-1.5 w-1.5 rounded-full bg-accent animate-pulse" />
-                <span className="text-[10px] font-bold text-white/30 uppercase tracking-[0.2em]">
-                  {Object.keys(onlineUsers).filter(id => onlineUsers[id] === 'online').length} entities online
+                <span className="text-[9px] sm:text-[10px] font-bold text-white/30 uppercase tracking-[0.2em]">
+                  {Object.keys(onlineUsers).filter(id => onlineUsers[id] === 'online').length} online
                 </span>
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-3 lg:gap-6 text-white/30">
+          <div className="flex items-center gap-2 sm:gap-3 lg:gap-6 text-white/30 flex-shrink-0">
             {/* Safety Number button — only for DMs where both parties have keys */}
             {activeChannel?.type === 'direct' && user?.publicKey && (() => {
               const them = activeChannel.members?.find(m => m.user.id !== user.id);
@@ -336,13 +336,13 @@ export default function ChatLayout() {
                   <button
                     onClick={() => setSafetyModalOpen(true)}
                     className={cn(
-                      "p-2 rounded-xl transition-all",
+                      "p-1.5 sm:p-2 rounded-xl transition-all",
                       isVerified
                         ? "text-green-400 bg-green-500/10 hover:bg-green-500/20"
                         : "text-white/30 hover:text-amber-400 hover:bg-amber-400/10"
                     )}
                   >
-                    {isVerified ? <ShieldCheck size={18} /> : <Shield size={18} />}
+                    {isVerified ? <ShieldCheck size={16} /> : <Shield size={16} />}
                   </button>
                 </Tooltip>
               ) : null;
@@ -351,17 +351,17 @@ export default function ChatLayout() {
               <Search className="h-4 w-4 mr-2" />
               <input type="text" placeholder="Recall..." className="bg-transparent border-none text-[11px] focus:ring-0 w-32" />
             </div>
-            <button className="hover:text-primary transition-colors"><Bell className="h-5 w-5" /></button>
+            <button className="hover:text-primary transition-colors p-1"><Bell className="h-4 w-4 sm:h-5 sm:w-5" /></button>
             <Tooltip content="Security & privacy disclosure">
-              <button onClick={() => setThreatModelOpen(true)} className="hover:text-white transition-colors">
-                <MoreVertical className="h-5 w-5" />
+              <button onClick={() => setThreatModelOpen(true)} className="hover:text-white transition-colors p-1">
+                <MoreVertical className="h-4 w-4 sm:h-5 sm:w-5" />
               </button>
             </Tooltip>
           </div>
         </header>
 
         {/* Message List */}
-        <div className="flex-1 overflow-y-auto p-4 lg:p-8 space-y-6 relative scroll-smooth">
+        <div className="flex-1 overflow-y-auto p-3 sm:p-4 lg:p-8 space-y-4 sm:space-y-6 relative scroll-smooth">
           {isFeedbackChannel ? (
             <div className="space-y-4 max-w-4xl mx-auto">
               <div className="glass-panel p-6 rounded-2xl border-white/5 bg-white/5 mb-6">
@@ -417,7 +417,7 @@ export default function ChatLayout() {
                       initial={{ opacity: 0, y: 20, filter: 'blur(10px)' }}
                       animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
                       transition={{ type: 'spring', stiffness: 100, delay: 0.03 }}
-                      className="flex gap-4 group max-w-4xl mx-auto relative"
+                      className="flex gap-2 sm:gap-4 group max-w-4xl mx-auto relative"
                       onContextMenu={(e) => !msg.deletedAt && handleContextMenu(e, msg)}
                     >
                       {/* Avatar */}
@@ -554,7 +554,7 @@ export default function ChatLayout() {
         </div>
 
         {/* Message Input */}
-        <div className="p-4 lg:p-8 pt-0 z-10 flex-shrink-0">
+        <div className="p-3 sm:p-4 lg:p-8 pt-0 z-10 flex-shrink-0 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
           {/* Reply bar */}
           <AnimatePresence>
             {replyTo && (
@@ -648,11 +648,11 @@ export default function ChatLayout() {
                   </Button>
                 </div>
               </motion.div>
-              <div className="max-w-4xl mx-auto flex justify-between px-6 mt-3">
+              <div className="max-w-4xl mx-auto flex justify-between px-3 sm:px-6 mt-2 sm:mt-3">
                 <span className="text-[9px] font-bold uppercase tracking-[0.3em]" style={{ color: sessionReady ? 'rgba(52,211,153,0.4)' : 'rgba(255,255,255,0.1)' }}>
-                  {sessionReady ? '⚡ ECDH Forward Secrecy Active' : '🔒 RSA Encrypted'}
+                  {sessionReady ? '⚡ ECDH Active' : '🔒 Encrypted'}
                 </span>
-                <span className="text-[9px] font-bold text-white/10 uppercase tracking-[0.3em]">Shift + Enter for new line</span>
+                <span className="hidden sm:inline text-[9px] font-bold text-white/10 uppercase tracking-[0.3em]">Shift + Enter for new line</span>
               </div>
             </>
           )}
@@ -665,7 +665,10 @@ export default function ChatLayout() {
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.9 }}
-              style={{ top: contextMenu.y, left: contextMenu.x }}
+              style={{
+                top: Math.min(contextMenu.y, window.innerHeight - 160),
+                left: Math.min(contextMenu.x, window.innerWidth - 180),
+              }}
               className="fixed z-[100] bg-[#111] border border-white/15 rounded-2xl py-2 min-w-[160px] shadow-2xl"
               onClick={(e) => e.stopPropagation()}
             >

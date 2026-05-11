@@ -20,6 +20,13 @@ body {
   @apply bg-[#050505] text-white selection:bg-primary/30 selection:text-white;
   font-family: 'Space Mono', monospace;
   overflow-x: hidden;
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* touch-action on interactive elements only (not body) */
+button, a, [role="button"] {
+  touch-action: manipulation;
 }
 
 h1, h2, h3, .font-display {
@@ -86,6 +93,19 @@ body::before {
 
 ::-webkit-scrollbar-thumb {
   @apply bg-white/10 rounded-full hover:bg-primary/50 transition-colors;
+}
+
+/* Smooth momentum scrolling on iOS — scoped to explicit utility class only */
+.overflow-y-auto {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+}
+
+/* Mobile: hide scrollbar track but keep functionality */
+@media (max-width: 768px) {
+  ::-webkit-scrollbar {
+    width: 2px;
+  }
 }
 
 /* Breath-taking additions */

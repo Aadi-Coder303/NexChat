@@ -144,6 +144,9 @@ export class AuthService {
       throw new AppError('Invalid credentials', 401);
     }
 
+    if (!user.passwordH) {
+      throw new AppError('Invalid credentials', 401);
+    }
     const isValid = await argon2.verify(user.passwordH, password_h);
 
     if (!isValid) {
@@ -165,6 +168,9 @@ export class AuthService {
       throw new AppError('Invalid recovery request', 400);
     }
 
+    if (!user.recoveryKeyH) {
+      throw new AppError('Invalid recovery key', 401);
+    }
     const isValidKey = await argon2.verify(user.recoveryKeyH, recoveryKey);
 
     if (!isValidKey) {
